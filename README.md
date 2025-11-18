@@ -1,8 +1,8 @@
 ---
-title: DIPG Safety Environment
+title: DIPG Gym
 emoji: 🧠
-colorFrom: '#00C9FF'
-colorTo: '#1B2845'
+colorFrom: indigo
+colorTo: blue
 sdk: docker
 pinned: false
 app_port: 8000
@@ -78,7 +78,7 @@ This format-first approach represents the current, most robust version of the en
 
 ## Getting Started: How to Use the Environment
 
-The `DIPGSafetyEnv` follows a standard client-server model.
+The DIPG Gym (DIPGSafetyEnv) follows a standard client-server model.
 
 ### 1. Running the Server
 
@@ -96,6 +96,9 @@ export FORMAT_MISMATCH_PENALTY=-10.0
 
 # Run the server
 python -m server.app
+
+# Push to huggingface
+PYTHONPATH=~/Desktop/openenv-temp-clone/src python3 -m openenv_cli push --repo-id surfiniaburger/dipg-gym
 ```
 
 The server will start on `0.0.0.0:8000` by default.

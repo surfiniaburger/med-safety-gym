@@ -1,0 +1,7 @@
+name: dipg-gym
+version: 0.1.0
+description: DIPG Safety Environment for OpenEnv
+license: MIT
+python_version: "3.11"
+entry_point: server.app:app
+dockerfile: Dockerfile
