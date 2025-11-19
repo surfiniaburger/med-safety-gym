@@ -96,37 +96,45 @@ class DIPGEnvironment(Environment):
         """
         Picks the next challenge from the shuffled dataset.
         """
-        if self._dataset_index >= len(self._shuffled_indices):
-            random.shuffle(self._shuffled_indices)
-            self._dataset_index = 0
+        max_attempts = len(self._shuffled_indices)
+        if not max_attempts:
+            raise RuntimeError("Dataset is empty, cannot reset.")
 
-        idx = self._shuffled_indices[self._dataset_index]
-        challenge = self.dataset[idx]
-        self._dataset_index += 1
+        for _ in range(max_attempts):
+            if self._dataset_index >= len(self._shuffled_indices):
+                random.shuffle(self._shuffled_indices)
+                self._dataset_index = 0
 
-        user_content = challenge['messages'][0]['content']
-        assistant_content = challenge['messages'][1]['content']
+            idx = self._shuffled_indices[self._dataset_index]
+            challenge = self.dataset[idx]
+            self._dataset_index += 1
 
-        # Parse user_content to get context and question
-        context_match = re.search(r"\*\*CONTEXT:\*\*\n(.*?)\n\n\*\*REQUEST:\*\*", user_content, re.DOTALL)
-        question_match = re.search(r"\*\*REQUEST:\*\*\n(.*?)\n\n\*\*REASONING STEPS:\*\*", user_content, re.DOTALL)
-        proof_match = re.search(r"PROOF:\n(.*)", user_content, re.DOTALL)
+            try:
+                user_content = challenge['messages'][0]['content']
+                assistant_content = challenge['messages'][1]['content']
 
-        context = context_match.group(1).strip() if context_match else ""
-        question = question_match.group(1).strip() if question_match else ""
-        proof = proof_match.group(1).strip() if proof_match else ""
+                # Parse user_content to get context and question
+                context_match = re.search(r"\*\*CONTEXT:\*\*\n(.*?)\n\n\*\*REQUEST:\*\*", user_content, re.DOTALL)
+                question_match = re.search(r"\*\*REQUEST:\*\*\n(.*?)\n\n\*\*REASONING STEPS:\*\*", user_content, re.DOTALL)
+                proof_match = re.search(r"PROOF:\n(.*)", user_content, re.DOTALL)
 
-        if not context or not question:
-            # Fallback or skip this entry
-            logger.warning("Could not parse context or question from dataset entry. Skipping.")
-            return self.reset() # Try next one
+                context = context_match.group(1).strip() if context_match else ""
+                question = question_match.group(1).strip() if question_match else ""
+                proof = proof_match.group(1).strip() if proof_match else ""
 
-        self._state = DIPGState(
-            current_context=context,
-            current_question=question,
-            expected_answer={"final": assistant_content, "proof": proof}
-        )
-        return DIPGObservation(context=context, question=question)
+                if context and question:
+                    self._state = DIPGState(
+                        current_context=context,
+                        current_question=question,
+                        expected_answer={"final": assistant_content, "proof": proof}
+                    )
+                    return DIPGObservation(context=context, question=question)
+
+                logger.warning("Could not parse context or question from dataset entry. Skipping.")
+            except (KeyError, IndexError) as e:
+                logger.warning(f"Malformed message structure in dataset, skipping. Error: {e}")
+
+        raise RuntimeError(f"Could not find a valid entry in the dataset after {max_attempts} attempts.")
     
     def step(self, action: DIPGAction) -> StepResult:
         logger.info(f"Received action: {action.llm_response}")
