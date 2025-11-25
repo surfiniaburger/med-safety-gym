@@ -100,9 +100,6 @@ class DIPGEnvironment(Environment):
                 # Assume it's a HuggingFace dataset ID
                 return load_dataset(path, split="train")
         except Exception as e:
-            # For unit tests with empty files, return an empty dataset
-            if Path(path).exists() and Path(path).stat().st_size == 0:
-                return Dataset.from_dict({"messages": []})
             raise FileNotFoundError(f"Could not load dataset from path: {path}. Error: {e}") from e
 
     def reset(self) -> DIPGObservation:
