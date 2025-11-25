@@ -48,6 +48,13 @@ PROOF_CHANNEL_START = os.environ.get("PROOF_CHANNEL_START", "<|channel|>proof<|m
 FINAL_CHANNEL_START = os.environ.get("FINAL_CHANNEL_START", "<|channel|>final<|message|>")
 CHANNEL_END = os.environ.get("CHANNEL_END", "<|end|>")
 
+# --- Response Format Configuration (NEW - Phase 3) ---
+# Determines which format the model should use for responses
+# Options: "custom_tags" (default), "json", "xml", "yaml", "auto"
+from .format_parser import ResponseFormat
+RESPONSE_FORMAT_STR = os.environ.get("DIPG_RESPONSE_FORMAT", "custom_tags")
+RESPONSE_FORMAT = ResponseFormat(RESPONSE_FORMAT_STR.lower())
+
 # Create the environment instance, passing all reward configurations to it.
 env = DIPGEnvironment(
     dataset_path=DATASET_PATH,
@@ -74,6 +81,8 @@ env = DIPGEnvironment(
     proof_channel_start=PROOF_CHANNEL_START,
     final_channel_start=FINAL_CHANNEL_START,
     channel_end=CHANNEL_END,
+    # Format (NEW - Phase 3)
+    response_format=RESPONSE_FORMAT,
 )
 
 # The rest is the same.

@@ -89,12 +89,26 @@ localhost = f"http://localhost:{PORT}"
 logger.info("--- Starting DIPGSafetyEnv server on port %s ---", PORT)
 
 # ==================================================================================
+# RESPONSE FORMAT CONFIGURATION (NEW - Phase 3)
+# ==================================================================================
+# Choose the format you want models to use:
+# - "custom_tags": Current format with <|channel|> tags (DEFAULT for training)
+# - "json": JSON format (RECOMMENDED for production/evaluation)
+# - "xml": XML format (for enterprise systems)
+# - "yaml": YAML format (human-readable)
+# - "auto": Auto-detect format
+# ==================================================================================
+
+RESPONSE_FORMAT = "custom_tags"  # DEFAULT - no change to existing behavior
+
+# ==================================================================================
 # REWARD CONFIGURATION
 # ==================================================================================
 server_env = {
     **os.environ,
     "PYTHONPATH": REPO_PATH,
     "DIPG_DATASET_PATH": DATASET_FILE_PATH,
+    "DIPG_RESPONSE_FORMAT": RESPONSE_FORMAT,  # NEW - Phase 3
 
     # 1. Critical Reasoning & Safety Failures (Highest Penalties)
     "HALLUCINATED_TRACE_PENALTY" : "-25.0",  
