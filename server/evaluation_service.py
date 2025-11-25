@@ -93,6 +93,7 @@ class EvaluationManager:
             detailed_results = []
             
             for idx, response in enumerate(responses):
+                observation = None
                 try:
                     # Reset environment to get a new challenge
                     observation = self.environment.reset()
@@ -124,7 +125,7 @@ class EvaluationManager:
                         "reward": self.environment.missing_answer_penalty,
                         "error": str(e)
                     }
-                    if 'observation' in locals():
+                    if observation:
                         error_entry["context"] = observation.context
                         error_entry["question"] = observation.question
                     detailed_results.append(error_entry)
