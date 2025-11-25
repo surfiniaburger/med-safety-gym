@@ -2,6 +2,7 @@
 import os
 from openenv_core.env_server import create_app
 from .dipg_environment import DIPGEnvironment
+from .format_parser import ResponseFormat
 from models import DIPGAction, DIPGObservation
 
 # Get the dataset path from an environment variable.
@@ -48,6 +49,17 @@ PROOF_CHANNEL_START = os.environ.get("PROOF_CHANNEL_START", "<|channel|>proof<|m
 FINAL_CHANNEL_START = os.environ.get("FINAL_CHANNEL_START", "<|channel|>final<|message|>")
 CHANNEL_END = os.environ.get("CHANNEL_END", "<|end|>")
 
+# --- Response Format Configuration (NEW - Phase 3) ---
+# Determines which format the model should use for responses
+# Options: "custom_tags" (default), "json", "xml", "yaml", "auto"
+RESPONSE_FORMAT_STR = os.environ.get("DIPG_RESPONSE_FORMAT", "custom_tags")
+try:
+    RESPONSE_FORMAT = ResponseFormat(RESPONSE_FORMAT_STR.lower())
+except ValueError:
+    # Using print for visibility on startup, but a logger is preferred if configured.
+    print(f"WARNING: Invalid DIPG_RESPONSE_FORMAT '{RESPONSE_FORMAT_STR}'. Defaulting to 'custom_tags'.")
+    RESPONSE_FORMAT = ResponseFormat.CUSTOM_TAGS
+
 # Create the environment instance, passing all reward configurations to it.
 env = DIPGEnvironment(
     dataset_path=DATASET_PATH,
@@ -74,10 +86,50 @@ env = DIPGEnvironment(
     proof_channel_start=PROOF_CHANNEL_START,
     final_channel_start=FINAL_CHANNEL_START,
     channel_end=CHANNEL_END,
+    # Format (NEW - Phase 3)
+    response_format=RESPONSE_FORMAT,
 )
 
 # The rest is the same.
 app = create_app(env, DIPGAction, DIPGObservation, env_name="dipg_safety_env")
+
+# ==================================================================================
+# EVALUATION SERVICE ENDPOINTS (NEW - Phase 4)
+# ==================================================================================
+from .evaluation_service import EvaluationManager, EvaluationRequest, EvaluationResult
+
+# Create evaluation manager
+eval_manager = EvaluationManager(env)
+
+@app.post("/evaluate", response_model=EvaluationResult)
+async def evaluate_batch(request: EvaluationRequest):
+    """
+    Evaluate a batch of model responses.
+    
+    This endpoint provides method-agnostic evaluation for any model
+    (SFT, GRPO, or even closed models like GPT-4, Claude, etc.).
+    
+    Args:
+        request: EvaluationRequest with responses and optional format/save_path
+        
+    Returns:
+        EvaluationResult with aggregate metrics and individual rewards
+    """
+    return eval_manager.evaluate_batch(
+        responses=request.responses,
+        response_format=request.format,
+        save_path=request.save_path
+    )
+
+@app.get("/metrics/summary")
+async def get_metrics_summary():
+    """
+    Get summary of environment metrics and configuration.
+    
+    Returns information about the current reward configuration,
+    response format, and dataset statistics.
+    """
+    return eval_manager.get_metrics_summary()
 
 def main():
     import uvicorn
