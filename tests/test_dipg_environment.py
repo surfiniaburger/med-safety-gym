@@ -30,7 +30,7 @@ def server():
 
     gunicorn_command = [
         "gunicorn",
-        "-w", "4",
+        "-w", "1",
         "-k", "uvicorn.workers.UvicornWorker",
         "-b", f"0.0.0.0:{PORT}",
         "server.app:app",

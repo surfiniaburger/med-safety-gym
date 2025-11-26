@@ -15,7 +15,7 @@ import statistics
 
 from .dipg_environment import DIPGEnvironment
 from .format_parser import ResponseFormat
-from models import DIPGAction
+from models import DIPGAction, DIPGState
 
 logger = logging.getLogger(__name__)
 
@@ -233,12 +233,11 @@ class EvaluationManager:
             for idx, item in enumerate(evaluations):
                 try:
                     # Set up the environment state with the provided ground truth
-                    from models import DIPGState
-                    self.environment._state = DIPGState(
+                    self.environment.set_state(DIPGState(
                         current_context=item.ground_truth.context,
                         current_question=item.ground_truth.question,
                         expected_answer=item.ground_truth.expected_answer
-                    )
+                    ))
                     
                     # Create action with the response
                     action = DIPGAction(llm_response=item.response)
