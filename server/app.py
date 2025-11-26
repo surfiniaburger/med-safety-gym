@@ -184,13 +184,27 @@ async def get_eval_tasks(
         
     Example workflow:
         # 1. Get tasks
-        tasks = requests.get("http://localhost:8000/eval/tasks?max_samples=100").json()
+        tasks_response = requests.get("http://localhost:8000/eval/tasks?max_samples=100").json()
+        tasks = tasks_response['tasks']
         
-        # 2. Query your model
-        responses = [your_model.generate(task['context'], task['question']) for task in tasks['tasks']]
+        # 2. Query your model and prepare evaluations
+        evaluations = []
+        for task in tasks:
+            response = your_model.generate(task['context'], task['question'])
+            evaluations.append({
+                "response": response,
+                "ground_truth": {
+                    "context": task["context"],
+                    "question": task["question"],
+                    "expected_answer": task["expected_answer"]
+                }
+            })
         
-        # 3. Evaluate
-        results = requests.post("http://localhost:8000/evaluate", json={"responses": responses}).json()
+        # 3. Evaluate stateless-ly
+        results = requests.post(
+            "http://localhost:8000/evaluate",
+            json={"evaluations": evaluations, "format": "json"}
+        ).json()
     """
     tasks = env.get_eval_tasks(max_samples=max_samples, shuffle=shuffle)
     return {
