@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict
 import sys
+import time
 
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent))
@@ -55,7 +56,7 @@ Question: {question}
 
 Provide your response in JSON format."""
 
-    import time
+    
     max_retries = 3
     retry_delay = 2
     
