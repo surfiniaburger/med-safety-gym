@@ -98,7 +98,7 @@ Provide your response in JSON format."""
             print(f"    ⚠️  Error (attempt {attempt+1}/{max_retries}): {e}")
             time.sleep(1)
             
-    return "" # Should not reach here due to raise e
+    raise RuntimeError("Exited retry loop unexpectedly without returning or raising an exception.")
 
 def run_benchmark(
     model_name: str,
