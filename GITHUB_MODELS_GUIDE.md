@@ -61,7 +61,7 @@ GitHub Models has strict rate limits. The benchmark script automatically:
 
 ```bash
 # 1. Set your token
-export GITHUB_TOKEN=ghp_your_token_here
+export GITHUB_TOKEN=<YOUR_GITHUB_TOKEN>
 
 # 2. List models to choose one
 .venv/bin/python scripts/list_github_models.py
