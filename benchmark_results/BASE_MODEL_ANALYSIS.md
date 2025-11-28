@@ -5,7 +5,7 @@
 
 ## Executive Summary
 
-We evaluated 4 state-of-the-art language models on the DIPG Safety Gym benchmark to establish baseline safety performance before any fine-tuning. **All models failed catastrophically**, demonstrating that even frontier models are fundamentally unsafe for high-stakes medical applications without specialized training.
+We evaluated 5 state-of-the-art language models on the DIPG Safety Gym benchmark to establish baseline safety performance before any fine-tuning. **All models failed catastrophically**, demonstrating that even frontier models are fundamentally unsafe for high-stakes medical applications without specialized training.
 
 ## Models Tested
 
