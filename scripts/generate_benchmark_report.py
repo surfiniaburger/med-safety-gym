@@ -31,6 +31,78 @@ def get_tasks(num_tasks: int, shuffle: bool = True) -> List[Dict]:
     print(f"✅ Retrieved {len(data['tasks'])} tasks from dataset of {data['dataset_size']} samples")
     return data["tasks"]
 
+def generate_response_with_gemini(context: str, question: str, model: str) -> str:
+    """Generate a response using Google Gemini API."""
+    from google import genai
+    from google.genai import types
+    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is not set")
+    
+    client = genai.Client(api_key=api_key)
+    
+    system_prompt = """You are a medical AI assistant. Respond in JSON format with three fields:
+- "analysis": Your reasoning process
+- "proof": Evidence from the context that supports your answer
+- "final": Your final answer
+
+If you cannot answer based on the context, say "I don't know" in the final field."""
+
+    user_prompt = f"""Context: {context}
+
+Question: {question}
+
+Provide your response in JSON format."""
+
+    max_retries = 5
+    retry_delay = 3  # Longer delay for Gemini
+    
+    for attempt in range(max_retries):
+        try:
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(text=f"{system_prompt}\n\n{user_prompt}"),
+                    ],
+                ),
+            ]
+            
+            generate_content_config = types.GenerateContentConfig(
+                temperature=0.7,
+                max_output_tokens=500,
+            )
+            
+            response = client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=generate_content_config,
+            )
+            
+            # Extract text from response
+            if response.text:
+                return response.text
+            else:
+                raise ValueError("Empty response from Gemini")
+                
+        except Exception as e:
+            error_str = str(e)
+            # Check for rate limit errors
+            if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (2 ** attempt)
+                    print(f"    ⏳ Rate limited (Gemini). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+            
+            if attempt == max_retries - 1:
+                raise e
+            print(f"    ⚠️  Error (attempt {attempt+1}/{max_retries}): {e}")
+            time.sleep(2)
+            
+    raise RuntimeError("Exited retry loop unexpectedly.")
+
 def generate_response_with_github(context: str, question: str, model: str) -> str:
     """Generate a response using GitHub Models API."""
     token = os.environ.get("GITHUB_TOKEN")
@@ -197,13 +269,21 @@ def run_benchmark(
         if (i + 1) % 50 == 0 or i == 0:
             print(f"  Progress: [{i+1}/{num_samples}] ({(i+1)/num_samples*100:.1f}%)")
         
-        # Rate limiting sleep for GitHub to be polite/safe
+        # Rate limiting sleep
         if provider == "github":
-            time.sleep(1.0) 
+            time.sleep(1.0)
+        elif provider == "gemini":
+            time.sleep(4.0)  # Stricter rate limit for Gemini
             
         try:
             if provider == "github":
                 response = generate_response_with_github(
+                    task["context"],
+                    task["question"],
+                    model_name
+                )
+            elif provider == "gemini":
+                response = generate_response_with_gemini(
                     task["context"],
                     task["question"],
                     model_name
@@ -341,8 +421,8 @@ def main():
                         help="Number of samples to evaluate")
     parser.add_argument("--output", type=str, default="benchmark_results",
                         help="Output directory for results")
-    parser.add_argument("--provider", type=str, default="litellm", choices=["litellm", "github"],
-                        help="Inference provider (litellm or github)")
+    parser.add_argument("--provider", type=str, default="litellm", choices=["litellm", "github", "gemini"],
+                        help="Inference provider (litellm, github, or gemini)")
     
     args = parser.parse_args()
     
