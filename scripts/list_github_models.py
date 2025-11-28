@@ -58,11 +58,7 @@ def main():
     
     for model in models:
         name = model.get('name', 'N/A')
-        model_id = model.get('name', 'N/A') # In inference endpoint, name is often the ID
-        # If the API returns a specific ID field, use that.
-        # Based on standard OpenAI-like APIs, 'id' is usually the key.
-        if 'id' in model:
-            model_id = model['id']
+        model_id = model.get('id', name)
             
         publisher = model.get('publisher', 'Unknown')
         
