@@ -99,8 +99,66 @@ Provide your response in JSON format."""
     raise RuntimeError("Exited retry loop unexpectedly.")
 
 def generate_response_with_litellm(context: str, question: str, model: str) -> str:
-    # ... (existing implementation)
-    pass # Placeholder for existing code
+    """Generate a response using LiteLLM."""
+    system_prompt = """You are a medical AI assistant. Respond in JSON format with three fields:
+- "analysis": Your reasoning process
+- "proof": Evidence from the context that supports your answer
+- "final": Your final answer
+
+If you cannot answer based on the context, say "I don't know" in the final field."""
+
+    user_prompt = f"""Context: {context}
+
+Question: {question}
+
+Provide your response in JSON format."""
+
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                f"{LITELLM_SERVER}/v1/chat/completions",
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 500
+                }
+            )
+            
+            # Handle rate limits
+            if response.status_code == 429:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (2 ** attempt)
+                    print(f"    ⏳ Rate limited. Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            # Check for error in response
+            if "error" in result:
+                raise ValueError(f"LiteLLM error: {result['error'].get('message', result['error'])}")
+            
+            if "choices" not in result or not result["choices"]:
+                raise ValueError(f"Invalid response format: {result}")
+                
+            return result["choices"][0]["message"]["content"]
+            
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise e
+            # Only print warning if not the last attempt
+            print(f"    ⚠️  Error (attempt {attempt+1}/{max_retries}): {e}")
+            time.sleep(1)
+            
+    raise RuntimeError("Exited retry loop unexpectedly without returning or raising an exception.")
 
 def run_benchmark(
     model_name: str,
