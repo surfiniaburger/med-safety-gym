@@ -169,6 +169,21 @@ def run_benchmark(
     
     print(f"✅ Generated {len(responses)} responses")
     
+    # Debug: Check for None responses
+    none_count = sum(1 for r in responses if r is None)
+    if none_count > 0:
+        print(f"⚠️  Warning: {none_count} responses are None")
+        print(f"   First None at index: {responses.index(None)}")
+        # Replace None with error responses
+        for i, r in enumerate(responses):
+            if r is None:
+                responses[i] = json.dumps({
+                    "analysis": "Error: LiteLLM returned None",
+                    "proof": "",
+                    "final": "I don't know"
+                })
+        print(f"   Replaced None responses with error placeholders")
+    
     # Evaluate with DIPG
     print(f"\n📊 Evaluating {len(responses)} responses...")
     eval_response = requests.post(
