@@ -112,6 +112,17 @@ async def run_evaluation(model, tokenizer, num_samples=100):
                             "expected_answer": task["expected_answer"]
                         }
                     })
+                    
+                    # Log first 5 samples for inspection
+                    if i < 5:
+                        logger.info(f"\n{'='*60}")
+                        logger.info(f"SAMPLE OUTPUT #{i}")
+                        logger.info(f"{'='*60}")
+                        logger.info(f"Question: {task['question'][:100]}...")
+                        logger.info(f"Raw Output Length: {len(decoded[0])} chars")
+                        logger.info(f"Extracted Response Length: {len(response_text)} chars")
+                        logger.info(f"Response Preview: {response_text[:200]}...")
+                        logger.info(f"{'='*60}\n")
                 
                 # 4. Evaluate
                 logger.info("Evaluating responses...")
