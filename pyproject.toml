@@ -11,13 +11,14 @@ requires-python = ">=3.11"
 dependencies = [
     "openenv-core>=0.1.0",  # The core dependency
     "fastapi>=0.109.1",
-    "uvicorn[standard]==0.24.0",
+    "uvicorn[standard]>=0.24.0",  # Changed from == to >= to allow mcp to use newer version
     "requests>=2.31.0",
     "wsproto==1.0.0",
     "gunicorn==22.0.0",
     "datasets",
     "starlette>=0.36.3",
     "idna>=3.7",
+    "mcp>=1.0.0",  # For MCP server functionality
 ]
 
 [project.optional-dependencies]
