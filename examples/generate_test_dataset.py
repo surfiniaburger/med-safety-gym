@@ -51,7 +51,9 @@ def generate_grounded_qa_needle():
 
 def generate_conflicting_context_needle():
     """Generates a QA pair with conflicting information."""
-    tumor = random.choice(tumor_nouns); drug = random.choice(experimental_drugs); outcome1, outcome2 = random.sample(outcomes, 2)
+    tumor = random.choice(tumor_nouns)
+    drug = random.choice(experimental_drugs)
+    outcome1, outcome2 = random.sample(outcomes, 2)
     source1 = f"A Phase I clinical trial report (Source A) on {drug} for recurrent {tumor} indicates {outcome1}."
     source2 = f"However, a preclinical study in mouse models (Source B) suggests that {drug} leads to {outcome2}."
     context = f"{source1} {source2}"
