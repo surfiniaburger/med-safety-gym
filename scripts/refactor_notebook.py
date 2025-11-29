@@ -1,5 +1,5 @@
 import json
-import glob
+
 import os
 
 def refactor_notebooks():
@@ -140,10 +140,7 @@ def refactor_notebooks():
                 print("  ✅ Replaced server setup script with call to scripts/setup_env.py")
 
             # 2. Update Evaluation Cell with Robust Parsing
-            if "server.mcp_server" in source and "export DIPG_DATASET_PATH" in source:
-                # This check might fail if I already replaced it with python code.
-                # Let's check for the python code signature instead.
-                pass
+
             
             if "StdioServerParameters" in source and "run_evaluation" in source:
                  cell["source"] = eval_code
