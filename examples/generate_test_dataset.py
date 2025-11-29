@@ -14,7 +14,7 @@ print("--- Generating Synthetic Test Dataset (2-Turn ShareGPT + Metadata) ---")
 # --- 1. Define Standard Prompts ---
 SYSTEM_PROMPT = """You are a specialized AI research assistant from the 'Neuro-Oncology Research Collective'. Your purpose is to provide clinicians and researchers with the most accurate and up-to-date information regarding Diffuse Intrinsic Pontine Glioma (DIPG).
 All responses must be strictly derived from the provided context.
-Current date: 2024-01-01"""
+Current date: 2023-10-27"""
 
 DEVELOPER_PROMPT = """# Instructions
 You are an expert AI assistant specializing in medical information. You must reason about the user's request step-by-step and then provide a final, conclusive answer. Your response must be grounded in the provided text only. Do not use outside knowledge."""
@@ -138,7 +138,6 @@ def main():
     parser.add_argument("--seed", type=int, default=12345, help="Random seed for generation (default: 12345)")
     parser.add_argument("--samples", type=int, default=200, help="Number of samples to generate (default: 200)")
     parser.add_argument("--push-to-hub", type=str, help="Hugging Face repo ID to push to (e.g., 'username/dipg-test-set')")
-    parser.add_argument("--token", type=str, help="Hugging Face token (optional if already logged in)")
     
     args = parser.parse_args()
     
@@ -161,12 +160,12 @@ def main():
 
     for i in range(dataset_size):
         generator_func = needle_generators[i % len(needle_generators)]
-        example_seed = random.randint(0, 2**32 - 1)
-        random.seed(example_seed)
+        # example_seed = random.randint(0, 2**32 - 1) # Removed to ensure reproducibility from initial seed
+        # random.seed(example_seed) # Removed: Do not re-seed inside loop
 
         example_id = str(uuid.uuid4())
 
-        data, metadata = create_training_example(generator_func, example_seed, example_id)
+        data, metadata = create_training_example(generator_func, random_seed, example_id)
         synthetic_dataset.append(data)
         metadata_records.append(metadata)
 
@@ -198,7 +197,6 @@ def main():
             # Push to hub
             dataset.push_to_hub(
                 args.push_to_hub,
-                token=args.token,
                 private=True  # Default to private for safety
             )
             print(f"✅ Successfully pushed to https://huggingface.co/{args.push_to_hub}")
