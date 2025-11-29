@@ -37,7 +37,10 @@ def generate_medical_axiom():
 
 def generate_grounded_qa_needle():
     """Generates a QA pair that requires synthesizing two facts."""
-    marker = random.choice(molecular_markers); drug = random.choice(experimental_drugs); outcome = random.choice(outcomes); tumor = random.choice(tumor_nouns)
+    marker = random.choice(molecular_markers)
+    drug = random.choice(experimental_drugs)
+    outcome = random.choice(outcomes)
+    tumor = random.choice(tumor_nouns)
     fact1 = f"The presence of an {marker} is a key biomarker in {tumor}."
     fact2 = f"The experimental drug {drug} has demonstrated {outcome} specifically in tumors expressing the {marker}."
     context = f"{fact1} (Source A). {fact2} (Source B)."
