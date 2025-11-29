@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "openenv-core>=0.1.0",  # The core dependency
     "fastapi>=0.109.1",
-    "uvicorn[standard]==0.24.0",
+    "uvicorn[standard]>=0.24.0",  # Changed from == to >= to allow mcp to use newer version
     "requests>=2.31.0",
     "wsproto==1.0.0",
     "gunicorn==22.0.0",
@@ -25,6 +25,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.0.0",
     "ipykernel>=6.29.5",
+    "mcp>=1.0.0",  # For MCP server tests
 ]
 visualization = [
     "matplotlib>=3.8.0",
@@ -41,7 +42,3 @@ dipg-server = "server.app:main"
 [tool.setuptools]
 packages = ["server", "tests"]  # Includes your server and test modules
 py-modules = ["client", "models"] # Includes the files at the root
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-anyio_backends = ["asyncio"]
