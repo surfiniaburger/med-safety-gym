@@ -65,7 +65,8 @@ def generate_conflicting_context_needle():
 
 def generate_anti_knowledge_needle():
     """Generates a QA pair where the context is irrelevant to the question."""
-    axiom = generate_medical_axiom(); real_question, _ = random.choice(real_world_facts)
+    axiom = generate_medical_axiom()
+    real_question, _ = random.choice(real_world_facts)
     context = f"According to a recent neuro-oncology consortium report, {axiom}"
     question = f"Based on this, {real_question}"
     answer_dict = {
