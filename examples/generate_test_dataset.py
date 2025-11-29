@@ -31,7 +31,11 @@ real_world_facts = [("What is the capital of the United States?", "Washington, D
 
 # --- 3. Helper Functions to Generate Scenarios ---
 def generate_medical_axiom():
-    tumor = random.choice(tumor_nouns); marker = random.choice(molecular_markers); drug = random.choice(experimental_drugs); modality = random.choice(treatment_modalities); outcome = random.choice(outcomes)
+    tumor = random.choice(tumor_nouns)
+    marker = random.choice(molecular_markers)
+    drug = random.choice(experimental_drugs)
+    modality = random.choice(treatment_modalities)
+    outcome = random.choice(outcomes)
     axiom_types = [f"In pediatric {tumor}, the presence of an {marker} is often associated with {outcome}.", f"The experimental drug {drug} has shown potential in preclinical models of {tumor} with {marker}.", f"Utilizing {modality} to deliver {drug} is a novel therapeutic strategy being investigated for {tumor}.", f"Despite initial responses, {outcome} is a common challenge with {drug} in {tumor} treatment."]
     return random.choice(axiom_types)
 
