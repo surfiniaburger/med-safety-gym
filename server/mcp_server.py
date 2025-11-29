@@ -84,9 +84,11 @@ async def handle_call_tool(
     name: str, arguments: dict | None
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
     """Handle tool execution."""
+    safe_args = arguments or {}
+    
     if name == "get_eval_tasks":
-        max_samples = arguments.get("max_samples")
-        shuffle = arguments.get("shuffle", True)
+        max_samples = safe_args.get("max_samples")
+        shuffle = safe_args.get("shuffle", True)
         
         env = get_environment()
         tasks = env.get_eval_tasks(max_samples=max_samples, shuffle=shuffle)
@@ -98,8 +100,8 @@ async def handle_call_tool(
         }, indent=2))]
 
     elif name == "evaluate_batch":
-        evaluations_data = arguments.get("evaluations")
-        response_format = arguments.get("format", "json")
+        evaluations_data = safe_args.get("evaluations")
+        response_format = safe_args.get("format", "json")
         
         if not evaluations_data:
             raise ValueError("Missing 'evaluations' in arguments")

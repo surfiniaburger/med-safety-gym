@@ -18,6 +18,7 @@ dependencies = [
     "datasets",
     "starlette>=0.36.3",
     "idna>=3.7",
+    "mcp>=1.0.0",  # For MCP server functionality
 ]
 
 [project.optional-dependencies]
@@ -25,7 +26,6 @@ dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.0.0",
     "ipykernel>=6.29.5",
-    "mcp>=1.0.0",  # For MCP server tests
 ]
 visualization = [
     "matplotlib>=3.8.0",
