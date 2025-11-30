@@ -124,9 +124,12 @@ async def run_evaluation(model, tokenizer, num_samples=100):
                         logger.info(f"Response Preview: {response_text[:200]}...")
                         logger.info(f"{'='*60}\n")
                 
-                # 4. Evaluate
-                logger.info("Evaluating responses...")
-                eval_result = await session.call_tool("evaluate_batch", arguments={"evaluations": evaluations})
+                # 4. Evaluate with JSON format
+                logger.info("Evaluating responses with JSON format...")
+                eval_result = await session.call_tool("evaluate_batch", arguments={
+                    "evaluations": evaluations,
+                    "format": "json"
+                })
                 metrics = json.loads(eval_result.content[0].text)
                 logger.info("✅ Evaluation complete")
                 return metrics
