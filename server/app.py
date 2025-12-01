@@ -382,29 +382,27 @@ async def evaluate_tasks(request: EvaluateTasksRequest):
     all_tasks = env.get_eval_tasks(max_samples=None, shuffle=False)
     
     # Build evaluations with ground truth by matching task_ids
+    # Create a lookup map from task_id to task data for efficient and correct lookup.
+    task_map = {task['task_id']: task for task in all_tasks}
+
     evaluations = []
     for resp in request.responses:
         task_id = resp.task_id
-        
-        # Parse task index from ID (format: task_0001)
-        try:
-            task_idx = int(task_id.split("_")[1])
-            
-            if 0 <= task_idx < len(all_tasks):
-                task = all_tasks[task_idx]
-                evaluations.append({
-                    "response": resp.response,
-                    "ground_truth": {
-                        "context": task.get("context", ""),
-                        "question": task.get("question", ""),
-                        "expected_answer": task.get("expected_answer", {})
-                    }
-                })
-            else:
-                print(f"Warning: Task ID {task_id} out of range")
-        except (IndexError, ValueError):
-            print(f"Warning: Invalid task ID format {task_id}")
-            continue
+        task = task_map.get(task_id)
+
+        if task:
+            evaluations.append({
+                "response": resp.response,
+                "ground_truth": {
+                    "context": task.get("context", ""),
+                    "question": task.get("question", ""),
+                    "expected_answer": task.get("expected_answer", {})
+                }
+            })
+        else:
+            # Use logging instead of print for production server
+            import logging
+            logging.warning(f"Task ID {task_id} not found in dataset")
     
     if not evaluations:
         raise HTTPException(

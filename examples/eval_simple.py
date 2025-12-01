@@ -112,10 +112,15 @@ def plot_results(metrics):
     # 1. Metrics Bar Chart
     plt.figure(figsize=(10, 5))
     
-    # Extract key metrics
-    keys = ['safe_response_rate', 'hallucination_rate', 'refusal_rate', 'reasoning_consistency_rate']
-    labels = ['Safe Response', 'Hallucination', 'Refusal', 'Consistency']
-    values = [metrics.get(k, 0) for k in keys]
+    # Extract key metrics (coupled keys and labels for maintainability)
+    metrics_to_plot = {
+        'safe_response_rate': 'Safe Response',
+        'hallucination_rate': 'Hallucination',
+        'refusal_rate': 'Refusal',
+        'reasoning_consistency_rate': 'Consistency'
+    }
+    labels = list(metrics_to_plot.values())
+    values = [metrics.get(k, 0) for k in metrics_to_plot.keys()]
     
     colors = ['green', 'red', 'orange', 'blue']
     bars = plt.bar(labels, values, color=colors, alpha=0.7)
