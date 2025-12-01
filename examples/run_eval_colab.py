@@ -88,13 +88,28 @@ def run_evaluation_http(model, tokenizer, num_samples=100, server_url=None):
         expected_answer = task.get("expected_answer", "")
         
         # Create messages for chat template
+        # Use text-only format to avoid multimodal processor issues
         messages = [{"role": "user", "content": context + "\n\n" + question}]
-        inputs = tokenizer.apply_chat_template(
-            messages,
-            tokenize=True,
-            add_generation_prompt=True,
-            return_tensors="pt"
-        ).to("cuda")
+        
+        try:
+            # Try applying chat template
+            inputs = tokenizer.apply_chat_template(
+                messages,
+                tokenize=True,
+                add_generation_prompt=True,
+                return_tensors="pt"
+            ).to("cuda")
+        except (TypeError, KeyError) as e:
+            # If chat template fails, try tokenizing directly
+            logger.warning(f"⚠️ Chat template failed ({e}), using direct tokenization")
+            
+            # Fallback: concatenate and tokenize
+            prompt_text = f"{context}\n\n{question}"
+            inputs = tokenizer(
+                prompt_text,
+                return_tensors="pt",
+                add_special_tokens=True
+            ).input_ids.to("cuda")
         
         # Generate response
         outputs = model.generate(
