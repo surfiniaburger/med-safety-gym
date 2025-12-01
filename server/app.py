@@ -387,16 +387,17 @@ async def evaluate_tasks(request: dict):
     eval_manager = EvaluationManager(env)
     
     # Get dataset tasks to match with responses
-    raw_tasks = env.get_eval_tasks(max_samples=len(responses) * 2, shuffle=False)
-    
+    # Create a lookup map from task_id to task data for efficient and correct lookup.
+    all_dataset_tasks = env.get_eval_tasks(shuffle=False)
+    task_map = {task['task_id']: task for task in all_dataset_tasks}
+
     # Build evaluations with ground truth
     evaluations = []
     for resp in responses:
         task_id = resp.get("task_id")
-        task_idx = int(task_id.split("_")[1]) if task_id else 0
-        
-        if task_idx < len(raw_tasks):
-            task = raw_tasks[task_idx]
+        task = task_map.get(task_id)
+
+        if task:
             evaluations.append({
                 "response": resp.get("response", ""),
                 "ground_truth": {
