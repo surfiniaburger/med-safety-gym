@@ -256,6 +256,169 @@ async def get_eval_tasks(
         "dataset_size": len(env.dataset)
     }
 
+
+# ==================================================================================
+# NEW CLEAN API - Task-Based Evaluation
+# ==================================================================================
+# These endpoints provide a simpler, more universal flow that works on any platform
+# (Colab, Kaggle, local notebooks, etc.) by minimizing client-side dependencies.
+
+
+@app.get("/tasks")
+async def get_tasks(
+    dataset: str = None,
+    count: int = 100
+):
+    """
+    Get evaluation tasks - SIMPLE API for universal platform support.
+    
+    This endpoint provides tasks for evaluation. The client:
+    1. Calls this endpoint to get tasks
+    2. Generates responses locally (using any model/platform)
+    3. Submits responses to /evaluate/tasks for scoring
+    
+    Args:
+        dataset: Dataset to use (default: from DIPG_DATASET_PATH env var)
+        count: Number of tasks to return (default: 100)
+        
+    Returns:
+        {
+          "tasks": [
+            {
+              "task_id": "task_001",
+              "question": "Patient presents with...",
+              "context": "Medical history..."
+            },
+            ...
+          ],
+          "dataset": "dipg-eval",
+          "total_count": 100
+        }
+        
+    Example Usage (works anywhere with HTTP):
+        import requests
+        
+        # Get tasks
+        resp = requests.get("http://server:8000/tasks?count=50")
+        tasks = resp.json()["tasks"]
+        
+        # Generate responses (user's code)
+        responses = []
+        for task in tasks:
+            response = my_model.generate(task["question"])
+            responses.append({
+                "task_id": task["task_id"],
+                "response": response
+            })
+        
+        # Submit for evaluation
+        results = requests.post(
+            "http://server:8000/evaluate/tasks",
+            json={"responses": responses, "format": "json"}
+        )
+    """
+    # Create environment
+    env = get_environment()
+    
+    # Get tasks from dataset
+    raw_tasks = env.get_eval_tasks(max_samples=count, shuffle=True)
+    
+    # Format tasks for client
+    tasks = []
+    for i, task in enumerate(raw_tasks):
+        tasks.append({
+            "task_id": f"task_{i:04d}",
+            "question": task["question"],
+            "context": task.get("context", "")
+        })
+    
+    # Determine dataset name
+    dataset_name = dataset or DATASET_PATH
+    
+    return {
+        "tasks": tasks,
+        "dataset": dataset_name,
+        "total_count": len(tasks)
+    }
+
+
+@app.post("/evaluate/tasks")
+async def evaluate_tasks(request: dict):
+    """
+    Evaluate responses to tasks - SIMPLE API for universal platform support.
+    
+    This endpoint receives task responses and returns evaluation metrics.
+    Server handles all the complexity (dataset lookup, scoring, etc.).
+    
+    Request Body:
+        {
+          "dataset": "dipg-eval",  # Optional, defaults to env var
+          "responses": [
+            {
+              "task_id": "task_001",
+              "response": "{\\"analysis\\": \\"...\\", \\"proof\\": \\"...\\", \\"final\\": \\"...\\"}"
+            },
+            ...
+          ],
+          "format": "json"  # Optional, defaults to "custom_tags"
+        }
+        
+    Returns:
+        {
+          "metrics": {
+            "mean_reward": 8.5,
+            "safe_response_rate": 0.95,
+            "hallucination_rate": 0.05,
+            ...
+          },
+          "task_count": 100
+        }
+    """
+    # Security: Limit number of tasks
+    responses = request.get("responses", [])
+    if len(responses) > MAX_EVALUATION_ITEMS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Too many responses. Maximum {MAX_EVALUATION_ITEMS} allowed."
+        )
+    
+    # Get environment
+    env = get_environment()
+    eval_manager = EvaluationManager(env)
+    
+    # Get dataset tasks to match with responses
+    raw_tasks = env.get_eval_tasks(max_samples=len(responses) * 2, shuffle=False)
+    
+    # Build evaluations with ground truth
+    evaluations = []
+    for resp in responses:
+        task_id = resp.get("task_id")
+        task_idx = int(task_id.split("_")[1]) if task_id else 0
+        
+        if task_idx < len(raw_tasks):
+            task = raw_tasks[task_idx]
+            evaluations.append({
+                "response": resp.get("response", ""),
+                "ground_truth": {
+                    "context": task.get("context", ""),
+                    "question": task.get("question", ""),
+                    "expected_answer": task.get("expected_answer", {})
+                }
+            })
+    
+    # Evaluate
+    response_format = request.get("format", "custom_tags")
+    result = eval_manager.evaluate_with_ground_truth(
+        evaluations=evaluations,
+        response_format=response_format
+    )
+    
+    return {
+        "metrics": result,
+        "task_count": len(evaluations)
+    }
+
+
 def main():
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
