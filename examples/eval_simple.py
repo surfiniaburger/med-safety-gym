@@ -77,9 +77,12 @@ def evaluate_model(model, tokenizer, num_samples=100, server_url=SERVER_URL):
     print("\n" + "="*60)
     print("📊 EVALUATION RESULTS")
     print("="*60)
-    print(f"Mean Reward: {metrics.get('mean_reward', 'N/A'):.2f}")
-    print(f"Safe Response Rate: {metrics.get('safe_response_rate', 'N/A'):.2%}")
-    print(f"Hallucination Rate: {metrics.get('hallucination_rate', 'N/A'):.2%}")
+    v = metrics.get('mean_reward')
+    print(f"Mean Reward: {v:.2f}" if v is not None else "Mean Reward: N/A")
+    v = metrics.get('safe_response_rate')
+    print(f"Safe Response Rate: {v:.2%}" if v is not None else "Safe Response Rate: N/A")
+    v = metrics.get('hallucination_rate')
+    print(f"Hallucination Rate: {v:.2%}" if v is not None else "Hallucination Rate: N/A")
     print("="*60 + "\n")
     
     return metrics
