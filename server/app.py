@@ -5,6 +5,7 @@ from openenv_core.env_server import create_app
 from .dipg_environment import DIPGEnvironment
 from .format_parser import ResponseFormat
 from models import DIPGAction, DIPGObservation
+import logging
 
 # Get the dataset path from an environment variable.
 # If it's not set, default to the dipg-sft-dataset on Hugging Face.
@@ -400,8 +401,7 @@ async def evaluate_tasks(request: EvaluateTasksRequest):
                 }
             })
         else:
-            # Use logging instead of print for production server
-            import logging
+
             logging.warning(f"Task ID {task_id} not found in dataset")
     
     if not evaluations:
