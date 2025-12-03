@@ -19,6 +19,7 @@ import subprocess
 import time
 import sys
 import requests
+import os
 
 def wait_for_server(url: str, timeout: int = 30) -> bool:
     """Poll a server URL until it responds or timeout is reached."""
@@ -35,7 +36,6 @@ def wait_for_server(url: str, timeout: int = 30) -> bool:
 
 def start_server(command: list, name: str, health_url: str, wait_time: int = 30, env: dict | None = None):
     """Start a server in the background and wait for it to be ready."""
-    import os
     
     print(f"🚀 Starting {name}...")
     
