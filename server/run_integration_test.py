@@ -18,19 +18,37 @@ Usage:
 import subprocess
 import time
 import sys
+import requests
 
-def start_server(command: str, name: str, wait_time: int = 3):
-    """Start a server in the background."""
+def wait_for_server(url: str, timeout: int = 30) -> bool:
+    """Poll a server URL until it responds or timeout is reached."""
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            response = requests.get(url, timeout=1)
+            if response.status_code in [200, 406]:  # 406 acceptable for MCP
+                return True
+        except (requests.ConnectionError, requests.Timeout):
+            pass
+        time.sleep(0.5)
+    return False
+
+def start_server(command: list, name: str, health_url: str, wait_time: int = 30):
+    """Start a server in the background and wait for it to be ready."""
     print(f"🚀 Starting {name}...")
     process = subprocess.Popen(
         command,
-        shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
-    print(f"   Waiting {wait_time}s for {name} to start...")
-    time.sleep(wait_time)
-    return process
+    print(f"   Waiting for {name} to be ready (timeout: {wait_time}s)...")
+    if wait_for_server(health_url, timeout=wait_time):
+        print(f"✅ {name} is ready!")
+        return process
+    else:
+        print(f"❌ {name} failed to start in {wait_time}s.")
+        process.terminate()
+        raise RuntimeError(f"{name} failed to start")
 
 def main():
     """Run the full integration test."""
@@ -44,23 +62,24 @@ def main():
     try:
         # Start FastMCP server
         fastmcp_process = start_server(
-            "PORT=8081 uv run python server/fastmcp_server.py",
+            ["uv", "run", "python", "server/fastmcp_server.py"],
             "FastMCP Server",
-            wait_time=5
+            "http://localhost:8081/mcp",
+            wait_time=30
         )
         
         # Start A2A agent server
         a2a_process = start_server(
-            "MCP_SERVER_URL=http://localhost:8081/mcp uv run uvicorn server.dipg_agent:a2a_app --host localhost --port 10000",
+            ["uv", "run", "uvicorn", "server.dipg_agent:a2a_app", "--host", "localhost", "--port", "10000"],
             "A2A Agent Server",
-            wait_time=5
+            "http://localhost:10000/.well-known/agent-card.json",
+            wait_time=30
         )
         
         # Run test client
         print("\n🧪 Running A2A test client...")
         result = subprocess.run(
-            "uv run python server/test_a2a_client.py",
-            shell=True
+            ["uv", "run", "python", "server/test_a2a_client.py"]
         )
         
         if result.returncode == 0:
