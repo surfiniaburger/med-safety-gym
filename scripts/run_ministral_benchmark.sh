@@ -27,8 +27,5 @@ if ! command -v "$PIP_CMD" >/dev/null 2>&1; then
   "$PROJECT_ROOT/.venv/bin/python" -m ensurepip --upgrade
 fi
 
-# Install benchmark-specific dependencies (quiet mode)
-"$PROJECT_ROOT/.venv/bin/python" -m pip install -q a2a-sdk matplotlib litellm httpx
-
 # Run the benchmark script using the venv's python
 "$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/benchmark_ministral_models.py" "$@"

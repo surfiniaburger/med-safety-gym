@@ -140,7 +140,7 @@ os.environ["DIPG_DATASET_PATH"] = "/path/to/local/dataset.jsonl"
 
 ```
 import requests
-SERVER = "https://dipg-server-5hurbdoigq-uc.a.run.app"
+SERVER = "https://<YOUR_SERVER_URL>"
 tasks = requests.get(f"{SERVER}/tasks?count=100").json()["tasks"]
 # ... generate responses ...
 metrics = requests.post(f"{SERVER}/evaluate/tasks", 

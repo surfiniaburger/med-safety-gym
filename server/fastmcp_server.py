@@ -135,7 +135,7 @@ def evaluate_responses(
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))
+    port = int(os.getenv("PORT", 8081))
     logger.info(f"🚀 Starting DIPG Evaluation MCP Server on port {port}")
     logger.info("📚 Available tools: get_eval_tasks, evaluate_responses")
     

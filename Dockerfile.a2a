@@ -15,7 +15,6 @@ RUN uv sync --frozen --no-install-project
 
 # Copy application code
 COPY server/ server/
-COPY tests/ tests/
 COPY models.py .
 COPY client.py .
 COPY README.md .
