@@ -235,7 +235,6 @@ export HALLUCINATED_TRACE_PENALTY=-10.0
 > [!NOTE]
 > **Open Source Commitment**: All datasets in this repository are generated using **open-source models only** (`gpt-oss:120b-cloud` via Ollama). While we explored closed-source models (e.g., Gemini) during development for capability testing, the final published datasets maintain full transparency and reproducibility.
 
-The DIPG Safety Gym includes a curated evaluation dataset:
 ## Evaluation Service
 
 The DIPG Safety Gym includes a powerful **evaluation service** that works independently of training. You can evaluate any model or system that generates text responses.
