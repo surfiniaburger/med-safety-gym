@@ -68,8 +68,6 @@ async def evaluate_example(example: Dict, model: str) -> Dict:
         # print(f"DEBUG Full Response: {response}")
         
         content = response.choices[0].message.content
-        # Debug print
-        print(f"DEBUG Raw Content: {content!r}")
         
         # Clean markdown code blocks if present
         if "```json" in content:

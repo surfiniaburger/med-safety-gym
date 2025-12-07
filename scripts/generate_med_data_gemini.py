@@ -296,7 +296,7 @@ async def main():
     print(f"   Estimated cost: ${cost_info['estimated_cost_usd']}")
     
     # Extrapolate to 1500 examples
-    if args.count > 0:
+    if len(results) > 0:
         cost_per_example = cost_info['estimated_cost_usd'] / len(results)
         cost_1500 = cost_per_example * 1500
         print(f"\n📊 Extrapolated cost for 1500 examples: ${round(cost_1500, 2)}")

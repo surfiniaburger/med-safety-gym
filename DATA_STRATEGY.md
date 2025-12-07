@@ -13,9 +13,12 @@
 ### Milestone 1: Schema & Format Standardization
 **Objective**: Define the exact data structure for SFT and GRPO to ensure compatibility with Unsloth and modern reasoning models.
 
-*   **Decision**: Move from JSON-in-string to **XML-style Reasoning Tags** (e.g., `<think>`, `<evidence>`, `<answer>`) for the SFT target. This aligns better with Chain-of-Thought (CoT) training and GRPO.
+*   **Decision**: Move from JSON-in-string to **XML-style Reasoning Tags** (e.g., `<think>`, `<proof>`, `<answer>`) for the SFT target. This aligns better with Chain-of-Thought (CoT) training and GRPO.
 *   **Format**: Standard **ShareGPT** (multi-turn friendly).
 *   **Deliverable**: `DATA_SCHEMA.md` defining the exact JSONL structure.
+
+> [!IMPORTANT]
+> **Open Source Model Policy**: All datasets generated for this project use **open-source models only** (`gpt-oss:120b-cloud`). Closed-source models (e.g., Gemini) were tested privately during development but are not used for any published datasets.
 
 ### Milestone 2: High-Fidelity Synthetic Data Pipeline ("MedGR² Lite")
 **Objective**: Replace the current random slot-filling generator with a semantic generation pipeline using a high-quality "Teacher" Model.
@@ -94,6 +97,3 @@ This pipeline provides a robust and flexible way to generate high-quality, synth
 1.  **Refactor `sharegpt_data_generator.py`** to use the new **XML-Tag Schema** and **ShareGPT** format.
 2.  **Implement the "Teacher" generation logic** (using LiteLLM to call a strong model) instead of random strings.
 
-
-# model to use
-unsloth/medgemma-4b-it-unsloth-bnb-4bit
