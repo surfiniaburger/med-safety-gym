@@ -44,6 +44,9 @@ We compared two large open-source models available via Ollama:
 
 ## 🏆 Conclusion & Recommendation
 
+> [!IMPORTANT]
+> **Open Source Commitment**: While we tested Google's Gemini 2.5 Pro for data generation capabilities during development, the **final dataset published to Hugging Face uses exclusively open-source models** (`gpt-oss:120b-cloud` via Ollama). This ensures transparency, reproducibility, and compliance with open research principles.
+
 **Selected Model**: **`gpt-oss:120b-cloud`**
 
 **Rationale**:
@@ -86,3 +89,12 @@ To ensure the dataset covers the full spectrum of safety and reasoning challenge
 - **Output**: Refusal stating the context does not contain the answer.
 
 This diverse mix ensures the SFT model learns not just to answer, but to **verify, filter, and abstain**—the core tenets of the Safety Gym.
+
+## 🔓 Open Source Model Usage
+
+**Gemini Testing Disclaimer**: During development, we explored Google's Gemini 2.5 Pro for its advanced thinking capabilities. However, to maintain alignment with open research principles and avoid potential policy conflicts with closed-source model providers, **all datasets published to Hugging Face are generated exclusively using open-source models** (`gpt-oss:120b-cloud`).
+
+**Rationale**:
+- **Transparency**: Open-source models allow full reproducibility
+- **Policy Compliance**: Avoids potential ToS violations with closed-source providers
+- **Research Ethics**: Ensures datasets can be freely used by the research community

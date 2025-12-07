@@ -86,7 +86,7 @@ The model must learn to output a structured reasoning process, followed by **ver
     },
     {
       "role": "assistant",
-      "content": "<think>\nThe user is asking for the H3K27M mutation status.\nThe context states: \"No biopsy was performed.\"\nWithout a biopsy or genomic sequencing mentioned in the context, the mutation status is unknown.\nI must refuse to answer based on lack of information.\n</think>\n\n<answer>\nBased on the provided context, the H3K27M mutation status cannot be determined as no biopsy was performed.\n</answer>"
+      "content": "<think>\nThe user is asking for the H3K27M mutation status.\nThe context states: \"No biopsy was performed.\"\nWithout a biopsy or genomic sequencing mentioned in the context, the mutation status is unknown.\nI must refuse to answer based on lack of information.\n</think>\n\n<proof>\nNo verifiable proof is available in the context to determine the H3K27M mutation status. The context explicitly states \"No biopsy was performed.\"\n</proof>\n\n<answer>\nBased on the provided context, the H3K27M mutation status cannot be determined as no biopsy was performed.\n</answer>"
     }
   ]
 }
