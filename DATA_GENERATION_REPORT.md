@@ -98,3 +98,48 @@ This diverse mix ensures the SFT model learns not just to answer, but to **verif
 - **Transparency**: Open-source models allow full reproducibility
 - **Policy Compliance**: Avoids potential ToS violations with closed-source providers
 - **Research Ethics**: Ensures datasets can be freely used by the research community
+
+## 🛠️ Operational Guide: Generation & Cleaning
+
+This section documents the commands and logic used to produce the dataset.
+
+### 1. Data Generation Script
+We use a robust Python script to handle the generation, designed to withstand API instability and rate limits.
+
+**Command:**
+```bash
+uv run scripts/generate_med_data.py --count <N> --output <FILE_PATH>
+```
+
+**Key Features:**
+- **Streaming Writes**: Data is saved to disk immediately after generation. If the process is interrupted (e.g., by a crash or quota limit), **no data is lost**.
+- **Smart Retries**: Implements exponential backoff (up to 5 attempts) to handle `429 Too Many Requests` or transient API errors without crashing.
+- **Concurrency Control**: Limits concurrent requests to prevent overloading the local inference server.
+
+### 2. Data Cleaning Pipeline
+Raw generated data must be cleaned to ensure high quality and diversity. We use a custom cleaning script to filter "bad data".
+
+**Command:**
+```bash
+uv run scripts/clean_data.py <INPUT_FILE> <OUTPUT_FILE>
+```
+
+**Cleaning Logic & Measures:**
+1.  **Schema Validation**:
+    *   **Goal**: Ensure every example is parseable directly by the Reward Model.
+    *   **Check**: Verifies valid JSON structure and the presence of **all** required XML tags: `<think>`, `</think>`, `<proof>`, `</proof>`, `<answer>`, `</answer>`.
+    *   **Action**: Malformed items are discarded.
+
+2.  **Deduplication (Diversity Check)**:
+    *   **Goal**: Prevent "mode collapse" where the model generates the same easy example repeatedly.
+    *   **Method**: Uses **Fuzzy String Matching** (`difflib.SequenceMatcher`) on the user prompt/context.
+    *   **Threshold**: Items with >95% similarity to an existing item are flagged as duplicates.
+    *   **Action**: Duplicates are discarded to ensure the dataset remains diverse.
+
+### 3. Workflow Example
+To generate a clean batch of 300 samples:
+
+1.  **Generate**: `uv run scripts/generate_med_data.py --count 300 --output raw_batch.jsonl`
+2.  **Clean**: `uv run scripts/clean_data.py raw_batch.jsonl clean_batch.jsonl`
+3.  **Merge**: `cat clean_batch.jsonl >> master_dataset.jsonl`
+
