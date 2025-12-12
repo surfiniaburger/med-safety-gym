@@ -56,7 +56,10 @@ def clean_dataset(data: List[Dict], similarity_threshold: float = 0.95) -> List[
     
     print(f"🔍 analyzing {len(data)} items...")
 
-    for item in data:
+    for i, item in enumerate(data):
+        if i % 50 == 0:
+            print(f"  ... processing item {i}/{len(data)}")
+
         # 1. Schema Validation
         if not validate_schema(item):
             malformed_count += 1
