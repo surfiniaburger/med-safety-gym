@@ -1,77 +1,73 @@
-# Docker & Local Deployment Guide
+# Docker Deployment Guide
 
-## Build the images (once)
+Two deployment methods are available depending on your use case: **Simple API** for basic evaluation, and **Advanced Agents** for A2A/MCP workflows.
+
+## 1. Simple API Deployment
+**Best for:** CI/CD pipelines, simple model benchmarking, and standard REST API usage.
+Uses the base `Dockerfile`.
+
+### Build & Run
 ```bash
-# From the project root
-docker build -f Dockerfile.mcp  -t med-safety-gym-mcp-server .
-Dockerfile.mcp builds the FastMCP server.
+# Build the main environment image
+docker build -f Dockerfile -t med-safety-gym-env .
 
+# Run the API server (Port 8080)
+# Make sure to mount your dataset
+docker run -p 8080:8080 \
+  -v $(pwd)/datasets:/app/datasets \
+  -e DIPG_DATASET_PATH=/app/datasets/dipg_1500_final.jsonl \
+  med-safety-gym-env
+```
+Once running, you can access the API at `http://localhost:8080/eval`.
+
+---
+
+## 2. Advanced Agent Deployment (FastMCP + A2A)
+**Best for:** Developing autonomous agents, using `run_mcp_eval.py`, or inspecting with Claude Desktop.
+Uses `Dockerfile.mcp`, `Dockerfile.a2a`, and `docker-compose.yml`.
+
+### Architecture
+*   **mcp-server** (`Port 8081`): The FastMCP tool server.
+*   **a2a-agent** (`Port 10000`): The ADK Agent wrapper.
+
+### Quick Start (Docker Compose)
+This orchestration brings up the full agent stack.
+
+```bash
+docker compose up -d --build
+```
+
+### Manual Build Instructions
+If you need to build individual components:
+
+```bash
+# 1. Build FastMCP Server
+docker build -f Dockerfile.mcp -t med-safety-gym-mcp-server .
+
+# 2. Build ADK Agent
 docker build -f Dockerfile.a2a -t med-safety-gym-a2a-agent .
-Dockerfile.a2a builds the ADK agent (LiteLLM‑backed).
 ```
 
-## Run the stack with Docker‑Compose
-```bash
-docker compose up -d
-```
-| Service | Container name | Port (host → container) | Role |
-|--------|----------------|------------------------|------|
-| **a2a‑agent** | `med-safety-gym-a2a-agent-1` | `10000 → 0.0.0.0:10000` | ADK agent |
-| **mcp‑server** | `med-safety-gym-mcp-server-1` | `8081 → 0.0.0.0:8081` | FastMCP evaluation service |
-
-Verify they’re running:
-```bash
-docker ps   # should list the two containers above
-```
-
-## Quick sanity‑check (optional)
+### Verification
+Run the verification script to ping both services and run a sample task.
 ```bash
 python server/verify_docker.py
 ```
-The script will:
-1. Ping `http://localhost:8081/mcp` → **FastMCP** reachable.
-2. Ping `http://localhost:10000` → **ADK agent** reachable.
-3. Pull an evaluation task, run a model via LiteLLM, send the response back, and print safety metrics.
-If you see `✅ Verification Successful!` you’re good to go.
+Expected output: `✅ Verification Successful!`
 
-## Running the components locally (no Docker)
+---
+
+## 3. Local (No Docker)
+For development, you can run components directly using `uv`.
+
 ```bash
-# FastMCP server (default port 8081)
+# 1. Export Environment
+export DIPG_DATASET_PATH=$(pwd)/datasets/dipg_1500_final.jsonl
+
+# 2. Run FastMCP Server (Port 8081)
 uv run python server/fastmcp_server.py
 
-# ADK agent (A2A wrapper, default port 10000)
-uv run python server/dipg_agent.py
-
-# Optional FastMCP HTTP API (already covered by fastmcp_server)
-uv run uvicorn server.app:app --host 0.0.0.0 --port 8000
-```
-### Required environment variables
-- `MCP_SERVER_URL` – e.g. `http://localhost:8081/mcp`
-- `LITELLM_MODEL` – e.g. `ollama/gpt-oss:20b-cloud`
-- `PORT` (for `fastmcp_server.py`) – default `8081`
-- `A2A_PORT` (for `dipg_agent.py`) – default `10000`
-Set them before launching, e.g.:
-```bash
+# 3. Run A2A Agent (Port 10000) - In a separate terminal
 export MCP_SERVER_URL=http://localhost:8081/mcp
-export LITELLM_MODEL=ollama/gpt-oss:20b-cloud
-export PORT=8081
-export A2A_PORT=10000
-```
----
-**TL;DR command summary**
-```bash
-# Build
-docker build -f Dockerfile.mcp  -t med-safety-gym-mcp-server .
-docker build -f Dockerfile.a2a -t med-safety-gym-a2a-agent .
-
-# Run both containers
-docker compose up -d
-
-# Verify
-python server/verify_docker.py
-```
-Or run locally without Docker:
-```bash
-uv run python server/fastmcp_server.py   # MCP server
-uv run python server/dipg_agent.py       # ADK agent (A2A)
+uv run uvicorn server.dipg_agent:a2a_app --port 10000
 ```

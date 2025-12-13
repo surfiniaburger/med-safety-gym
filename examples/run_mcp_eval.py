@@ -37,7 +37,7 @@ async def run_evaluation(model, tokenizer, num_samples=100):
 
     # 1. Setup MCP Server Parameters (Pointing to EVAL dataset)
     eval_env = os.environ.copy()
-    eval_env["DIPG_DATASET_PATH"] = "surfiniaburger/dipg-eval-dataset"
+    eval_env["DIPG_DATASET_PATH"] = os.environ.get("DIPG_DATASET_PATH", "surfiniaburger/dipg-eval-dataset")
     
     # Ensure PYTHONPATH includes the current directory so server modules can be found
     if "PYTHONPATH" in eval_env:
@@ -164,16 +164,30 @@ async def run_evaluation(model, tokenizer, num_samples=100):
         return None
 
 def main():
-    # This script is designed to be run where 'model' and 'tokenizer' are already defined
-    # or to be imported.
-    # If run standalone, it would need to load the model.
-    logger.info("This script is intended to be run within the notebook or where 'model' is available.")
-    logger.info("If running standalone, please uncomment the model loading section.")
+    logger.info("⚠️ Running in STANDALONE simulation mode.")
     
-    # Example standalone usage (commented out):
-    # from unsloth import FastLanguageModel
-    # model, tokenizer = FastLanguageModel.from_pretrained(...)
-    # metrics = asyncio.run(run_evaluation(model, tokenizer, num_samples=10))
+    # Mock Model & Tokenizer
+    class MockTokenizer:
+        def apply_chat_template(self, *args, **kwargs):
+            class TensorMock:
+                def to(self, device): return self
+            return TensorMock()
+        @property
+        def eos_token_id(self): return 0
+        def batch_decode(self, *args, **kwargs):
+            return ["<|start|>assistant<|message|><think>Analysis...</think><proof>Quote</proof><answer>Answer</answer><|end|>"]
+
+    class MockModel:
+        def generate(self, *args, **kwargs):
+            return [""] # Dummy
+
+    tokenizer = MockTokenizer()
+    model = MockModel()
+    
+    # Point to local dataset
+    os.environ["DIPG_DATASET_PATH"] = os.path.join(os.getcwd(), "datasets", "dipg_1500_final.jsonl")
+    
+    asyncio.run(run_evaluation(model, tokenizer, num_samples=5))
 
 if __name__ == "__main__":
     main()

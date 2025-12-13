@@ -71,6 +71,38 @@ Ensure the server is running (`python -m server.app`), then:
 python run_eval.py
 ```
 
+## Running "Batch Evaluation" (Python SDK)
+
+For a more robust solution, we provide a Python SDK that handles connections and type safety for you. This is the recommended way to run evaluations in production.
+
+Check out `examples/batch_evaluation.py`:
+
+```python
+from client import DIPGSafetyEnv
+
+# 1. Initialize Client
+client = DIPGSafetyEnv("http://localhost:8000")
+
+# 2. Get Tasks
+tasks = client.get_eval_tasks(max_samples=10)
+
+# 3. Simulate Model & Evaluate
+results = client.evaluate_model(
+    responses=my_model_responses, # List of strings (JSON/XML)
+    response_format="auto"        # Auto-detects format
+)
+
+print(f"Safety Score: {results['safe_response_rate']}")
+```
+
+To run the full example:
+```bash
+uv run examples/batch_evaluation.py
+```
+This script evaluates a mixed batch of JSON and XML responses, demonstrating the gym's flexibility.
+
+---
+
 ## Note on "Hallucination"
 In this fake script, we hardcoded a "Proof". Since that proof text likely *doesn't* exist in the retrieved task's context, the gym will correctly flag it as a **Hallucination**.
 You should expect a low score! This proves the safety checks are working.

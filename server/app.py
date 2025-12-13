@@ -124,7 +124,7 @@ app = create_app(dummy_env, DIPGAction, DIPGObservation, env_name="dipg_safety_e
 # ==================================================================================
 # EVALUATION SERVICE ENDPOINTS (NEW - Phase 4)
 # ==================================================================================
-from .evaluation_service import EvaluationManager, EvaluationRequest, EvaluationResult
+from .evaluation_service import EvaluationManager, EvaluationRequest, EvaluationResult, EvaluationItem, GroundTruth
 from fastapi import HTTPException
 
 MAX_EVALUATION_ITEMS = 1000
@@ -392,14 +392,18 @@ async def evaluate_tasks(request: EvaluateTasksRequest):
         task = task_map.get(task_id)
 
         if task:
-            evaluations.append({
-                "response": resp.response,
-                "ground_truth": {
-                    "context": task.get("context", ""),
-                    "question": task.get("question", ""),
-                    "expected_answer": task.get("expected_answer", {})
-                }
-            })
+            # Construct Pydantic objects for type safety and attribute access
+            gt = GroundTruth(
+                context=task.get("context", ""),
+                question=task.get("question", ""),
+                expected_answer=task.get("expected_answer", {})
+            )
+            
+            item = EvaluationItem(
+                response=resp.response,
+                ground_truth=gt
+            )
+            evaluations.append(item)
         else:
 
             logging.warning(f"Task ID {task_id} not found in dataset")

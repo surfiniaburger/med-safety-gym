@@ -169,9 +169,16 @@ class DIPGEnvironment(Environment):
                 assistant_content = messages[1].get("content", "")
                 
                 # Parse context and question from user message
+                # Try Markdown format first (Legacy)
                 context_match = re.search(r"\*\*CONTEXT:\*\*\s*(.*?)\s*\*\*REQUEST:\*\*", user_message, re.DOTALL)
                 question_match = re.search(r"\*\*REQUEST:\*\*\s*(.*?)\s*(?:\*\*REASONING STEPS:\*\*|$)", user_message, re.DOTALL)
                 
+                # Try XML tags (New Format) if Markdown fails
+                if not context_match:
+                    context_match = re.search(r"<context>\s*(.*?)\s*</context>", user_message, re.DOTALL)
+                if not question_match:
+                    question_match = re.search(r"<question>\s*(.*?)\s*</question>", user_message, re.DOTALL)
+
                 # Parse proof from user message (ground truth)
                 proof_match = re.search(r"PROOF:\s*(.*?)$", user_message, re.DOTALL)
                 
@@ -218,8 +225,16 @@ class DIPGEnvironment(Environment):
                 assistant_content = challenge['messages'][1]['content']
 
                 # Parse user_content to get context and question
+                # Try Markdown format first
                 context_match = re.search(r"\*\*CONTEXT:\*\*\n(.*?)\n\n\*\*REQUEST:\*\*", user_content, re.DOTALL)
                 question_match = re.search(r"\*\*REQUEST:\*\*\n(.*?)\n\n\*\*REASONING STEPS:\*\*", user_content, re.DOTALL)
+                
+                # Try XML tags (New Format)
+                if not context_match:
+                    context_match = re.search(r"<context>\s*(.*?)\s*</context>", user_content, re.DOTALL)
+                if not question_match:
+                    question_match = re.search(r"<question>\s*(.*?)\s*</question>", user_content, re.DOTALL)
+
                 proof_match = re.search(r"PROOF:\n(.*)", user_content, re.DOTALL)
 
                 context = context_match.group(1).strip() if context_match else ""
@@ -234,7 +249,7 @@ class DIPGEnvironment(Environment):
                     )
                     return DIPGObservation(context=context, question=question)
 
-                logger.warning("Could not parse context or question from dataset entry. Skipping.")
+                logger.warning(f"Could not parse using Markdown or XML at index {idx}. Skipping.")
             except (KeyError, IndexError) as e:
                 logger.warning(f"Malformed message structure in dataset, skipping. Error: {e}")
 

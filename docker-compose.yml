@@ -1,5 +1,6 @@
 services:
   mcp-server:
+    image: med-safety-gym-mcp-server
     build:
       context: .
       dockerfile: Dockerfile.mcp
@@ -12,6 +13,7 @@ services:
       # - HF_TOKEN=${HF_TOKEN}
 
   a2a-agent:
+    image: med-safety-gym-a2a-agent
     build:
       context: .
       dockerfile: Dockerfile.a2a
