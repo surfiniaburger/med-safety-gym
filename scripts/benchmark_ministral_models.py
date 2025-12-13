@@ -106,8 +106,6 @@ async def main() -> None:
         all_results: List[Dict] = []
         for model in MINISTRAL_MODELS:
             print(f"\n🔹 Benchmarking {model} …")
-            # Set environment variable for LiteLLM (used internally by the agent)
-            os.environ["LITELLM_MODEL"] = model
             metrics = await evaluate_model(model, client)
             all_results.append(metrics)
             print(f"✅ {model} metrics: {metrics['metrics']}")
