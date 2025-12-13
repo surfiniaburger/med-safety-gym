@@ -8,6 +8,7 @@ Based on Google's currency agent test client pattern.
 """
 
 import os
+import sys
 import traceback
 from typing import Any
 from uuid import uuid4
@@ -170,6 +171,7 @@ async def main() -> None:
         print("\nMake sure:")
         print("1. FastMCP server is running on port 8081")
         print("2. A2A agent server is running on port 10000")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

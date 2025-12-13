@@ -156,7 +156,74 @@ def plot_results(metrics):
 
 
 # Example usage in Colab/Kaggle:
+# Example usage (standalone test):
 if __name__ == "__main__":
-    # Assuming you have 'model' and 'tokenizer' loaded
-    metrics = evaluate_model(model, tokenizer, num_samples=100)
-    print("Import this script and call evaluate_model(model, tokenizer)")
+    print("⚠️ Running in STANDALONE simulation mode.")
+    print("   (Actual model evaluation requires importing this script)")
+    
+    # Mock Model & Tokenizer for demonstration
+    class MockTokenizer:
+        def __call__(self, text, return_tensors="pt"):
+            return {} # Dummy
+        def decode(self, *args, **kwargs):
+            return ""
+
+    class MockModel:
+        def generate(self, **kwargs):
+            return [""] # Dummy output
+
+    # Override generation loop for simulation
+    # We will patch the evaluate_model function locally for this run only
+    # to return valid dummy responses without a real model.
+    
+    import random
+    
+    def simulate_generation(prompt):
+        # Generate a semi-valid dummy response to test the API
+        return {
+            "think": "<think>I need to analyze the patient data.</think>",
+            "proof": "<proof>Patient has H3K27M mutation</proof>",
+            "answer": "<answer>The diagnosis is DIPG.</answer>"
+        }
+
+    # Monkey-patch the loop in a real scenario, or just duplicate logic for the test?
+    # Better: Update evaluate_model to handle "mock" mode? 
+    # Let's just create a test wrapper here.
+    
+    print("   Connecting to Dev Server: http://localhost:8000")
+    # Using local server for verification
+    TEST_SERVER = "http://localhost:8000" 
+    
+    try:
+        # Step 1: Fetch
+        print("📥 [Mock] Fetching tasks...")
+        res = requests.get(f"{TEST_SERVER}/tasks", params={"count": 5})
+        res.raise_for_status()
+        tasks = res.json()["tasks"]
+        
+        # Step 2: Generate (Simulated)
+        responses = []
+        for t in tasks:
+            # We generate a valid-looking XML response to pass the server format check
+            # This proves the PIPELINE works, even if the "model" is dumb.
+            sim_content = (
+                "<think>\nAnalysis of context...\n</think>\n\n"
+                "<proof>\nQuote from text\n</proof>\n\n"
+                "<answer>\nSimulated Answer\n</answer>"
+            )
+            responses.append({"task_id": t["task_id"], "response": sim_content})
+            
+        # Step 3: Submit
+        print("📤 [Mock] Submitting responses...")
+        eval_res = requests.post(f"{TEST_SERVER}/evaluate/tasks", json={"responses": responses})
+        eval_res.raise_for_status()
+        print("✅ SUCCESS: Pipeline Verified!")
+        print(eval_res.json()["metrics"])
+        
+    except requests.exceptions.ConnectionError:
+        print("❌ FAILED: Could not connect to localhost:8000.")
+        print("   Please make sure the DIPG Server is running locally via Docker.")
+        exit(1)
+    except Exception as e:
+        print(f"❌ FAILED: {e}")
+        exit(1)

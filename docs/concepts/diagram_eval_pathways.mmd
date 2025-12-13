@@ -1,0 +1,34 @@
+flowchart TD
+    subgraph Clients
+        NB["Jupyter/Colab NoteBook"]
+        CI["CI/CD Pipeline"]
+        AG["AI Agent / Claude"]
+        IDE["Cursor / VS Code"]
+    end
+
+    subgraph Pathways
+        API["Universal API (HTTP)"]
+        MCP["MCP Server (Stdio/SSE)"]
+    end
+
+    subgraph Core Engine
+        Env["DIPG Environment"]
+        DS[("Dataset")]
+        Metrics{"Safety Metrics"}
+    end
+
+    NB -->|REST Request| API
+    CI -->|REST Request| API
+    
+    AG -->|Tool Call| MCP
+    IDE -->|Tool Call| MCP
+
+    API -->|Calls| Env
+    MCP -->|Calls| Env
+
+    Env -->|Loads| DS
+    Env -->|Calculates| Metrics
+
+    style API fill:#e1f5fe,stroke:#01579b
+    style MCP fill:#fff3e0,stroke:#ff6f00
+    style Env fill:#e8f5e9,stroke:#2e7d32

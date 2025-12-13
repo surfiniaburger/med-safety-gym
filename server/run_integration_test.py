@@ -46,14 +46,14 @@ def main():
         fastmcp_process = start_server(
             "PORT=8081 uv run python server/fastmcp_server.py",
             "FastMCP Server",
-            wait_time=5
+            wait_time=10
         )
         
         # Start A2A agent server
         a2a_process = start_server(
             "MCP_SERVER_URL=http://localhost:8081/mcp uv run uvicorn server.dipg_agent:a2a_app --host localhost --port 10000",
             "A2A Agent Server",
-            wait_time=5
+            wait_time=10
         )
         
         # Run test client
