@@ -122,8 +122,8 @@ class DIPGEnvironment(Environment):
                     if "test" in ds_dict:
                         return ds_dict["test"]
                     elif len(ds_dict) > 0:
-                        # Return the first available split
-                        return ds_dict[list(ds_dict.keys())[0]]
+                        # Return the first available split, sorting for determinism.
+                        return ds_dict[sorted(ds_dict.keys())[0]]
                     else:
                         raise ValueError(f"Dataset at {path} is empty (no splits found).")
         except Exception as e:
