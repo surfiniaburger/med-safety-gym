@@ -48,10 +48,11 @@ To address the "Hallucinated Trace" penalty caused by high-quality paraphrasing,
 | **GPT-OSS (20B)** | V3 (Exact) | -11.1 | -5.0 | N/A |
 | **GPT-OSS (20B)** | **V4 (Fuzzy)** | **-8.57** | **0.0** | **+2.54 (23%)** |
 | **Gemma 3 (1B)** | **V4 (Fuzzy)** | **-8.50** | **0.0** | **New Baseline** |
+| **MedGemma (4B-IT)** | **V4 (Fuzzy)** | **-8.50** | **0.0** | **Strong Instruct** |
 
 **Conclusion**: The V4 upgrade successfully validates correct reasoning chains that were previously rejected.
 - **Ministral-3 (3B)** and **GPT-OSS (20B)** saw significant gains (+18-23%).
-- **Gemma 3 (1B)** is the surprise standout, achieving **-8.50** mean reward despite its tiny size, tying with the 20B model. This suggests that for specific safety tasks, small, efficient models with strong instruction following can rival much larger architectures.
+- **Small Instruct Models Shine**: Both **Gemma 3 (1B)** and **MedGemma (4B Instruct)** achieved **-8.50**, tying the best performance. This confirms that **instruction-tuned** models, even if small, are highly effective at following the strict safety protocol when supported by fuzzy matching.
 
 ## Final Recommendations
 
