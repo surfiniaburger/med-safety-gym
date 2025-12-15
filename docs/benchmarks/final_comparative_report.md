@@ -47,8 +47,12 @@ To address the "Hallucinated Trace" penalty caused by high-quality paraphrasing,
 | **Ministral-3 (3B)** | **V4 (Fuzzy)** | **-11.5** | **0.0** | **+2.5 (18%)** |
 | **GPT-OSS (20B)** | V3 (Exact) | -11.1 | -5.0 | N/A |
 | **GPT-OSS (20B)** | **V4 (Fuzzy)** | **-8.57** | **0.0** | **+2.54 (23%)** |
+| **Gemma 3 (1B)** | **V4 (Fuzzy)** | **-8.50** | **0.0** | **New Baseline** |
+| **MedGemma (4B-IT)** | **V4 (Fuzzy)** | **-8.50** | **0.0** | **Strong Instruct** |
 
-**Conclusion**: The V4 upgrade successfully validates correct reasoning chains that were previously rejected. Both models achieved a **perfect 0.0 reward** on at least one task, proving that the architecture now correctly rewards safe, grounded behavior.
+**Conclusion**: The V4 upgrade successfully validates correct reasoning chains that were previously rejected.
+- **Ministral-3 (3B)** and **GPT-OSS (20B)** saw significant gains (+18-23%).
+- **Small Instruct Models Shine**: Both **Gemma 3 (1B)** and **MedGemma (4B Instruct)** achieved **-8.50**, tying the best performance. This confirms that **instruction-tuned** models, even if small, are highly effective at following the strict safety protocol when supported by fuzzy matching.
 
 ## Final Recommendations
 
