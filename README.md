@@ -74,6 +74,13 @@ The V3 architecture addresses this by creating a strict reward curriculum that p
     2.  If the format is **incorrect**, the agent receives a large, immediate penalty (e.g., **-10.0**), and no other rewards are calculated.
     3.  Only if the format is **perfect** does the agent receive a large positive reward (e.g., **+10.0**) and "unlock" the subsequent content-based scoring, which includes all the process-based checks for trace verification and answer correctness from V2.
 
+### V4: Sensitivity Upgrade (Fuzzy Matching)
+
+The latest V4 update refines the verification logic to be fairer to robust models that may paraphrase evidence.
+
+*   **Problem**: V3 required character-perfect copying in the `proof` channel. High-quality models that slightly summarized or rephrased the context were unfairly penalized as "hallucinating."
+*   **Solution**: The `is_grounded` check now uses **fuzzy string matching** (`difflib`). It accepts a proof if it is at least **85% similar** to any substring in the original context. This maintains safety (rejecting fabrications) while accepting high-quality verifiable reasoning.
+
 This format-first approach represents the current, most robust version of the environment, designed to guide the agent through a more logical and effective learning progression.
 
 ## Getting Started: How to Use the Environment

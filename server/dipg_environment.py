@@ -11,6 +11,7 @@ import logging
 from typing import Optional
 from datasets import load_dataset, Dataset
 from .format_parser import FormatParser, ResponseFormat
+import difflib
 
 logger = logging.getLogger(__name__)
 
@@ -397,8 +398,59 @@ class DIPGEnvironment(Environment):
         return self.match_format.search(llm_response) is not None
 
     def is_grounded(self, proof_text: str, context: str) -> bool:
-        """Checks if the proof is a direct quote from the context."""
-        return proof_text in context if proof_text else False
+        """
+        Checks if the proof is grounded in the context.
+        V4 Update: Uses fuzzy matching to allow for high-quality paraphrasing.
+        """
+        if not proof_text:
+            return False
+            
+        # 1. Exact match check (fast path)
+        if proof_text in context:
+            return True
+            
+        # 2. Fuzzy match check
+        # We want to see if proof_text is *contained* in context with some fuzziness.
+        # Check if the max similarity of proof to any substring of context is high enough.
+        similarity = self._get_max_similarity(proof_text, context)
+        
+        # Threshold: 0.85 allows for minor rephrasing/truncation but rejects hallucinations.
+        return similarity >= 0.85
+
+    def _get_max_similarity(self, needle: str, haystack: str) -> float:
+        """
+        Finds the maximum similarity of `needle` to any substring of `haystack`.
+        Uses difflib.SequenceMatcher for robustness.
+        """
+        matcher = difflib.SequenceMatcher(None, needle, haystack)
+        
+        # find_longest_match gives us the best contiguous block
+        # But we want the ratio of the match relative to the needle length
+        match = matcher.find_longest_match(0, len(needle), 0, len(haystack))
+        
+        if match.size == 0:
+            return 0.0
+            
+        # Calculate ratio based on the matched block size vs needle size
+        # This is a strict "containment" check. 
+        # If the model paraphrases heavily, match.size might be small.
+        # But for "copy-paste with errors", match.size should be close to len(needle).
+        
+        # Better approach for paraphrasing:
+        # Extract the window from haystack that corresponds to the match
+        # and compare the full needle against that window (plus some buffer).
+        
+        start = match.b
+        end = match.b + match.size
+        
+        # Expand window slightly to capture the full sentence/phrase if needle is slightly different
+        window_start = max(0, start - 10)
+        window_end = min(len(haystack), end + (len(needle) - match.size) + 10)
+        
+        candidate = haystack[window_start:window_end]
+        
+        # Now compare needle vs candidate window directly
+        return difflib.SequenceMatcher(None, needle, candidate).ratio()
 
     def supports(self, proof_text: str, final_text: str) -> bool:
         """

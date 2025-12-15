@@ -87,6 +87,8 @@ class FormatParser:
         if format_type == ResponseFormat.AUTO:
             format_type = self._detect_format(response)
         
+        print(f"DEBUG: Detected format: {format_type}")
+        
         parser_map = {
             ResponseFormat.JSON: self._parse_json,
             ResponseFormat.XML: self._parse_xml,
@@ -102,19 +104,25 @@ class FormatParser:
     def _detect_format(self, response: str) -> ResponseFormat:
         """Auto-detect the format of the response"""
         response_stripped = response.strip()
+        print(f"DEBUG: detecting format for: {response_stripped[:50]}...")
         
         # Check for JSON (starts with { or wrapped in markdown)
         if response_stripped.startswith('{') or '```json' in response_stripped.lower() or (response_stripped.startswith('```') and '{' in response_stripped):
             return ResponseFormat.JSON
         
-        # Check for XML (starts with < and contains dipg_response or xml declaration)
-        if response_stripped.startswith('<') or '```xml' in response_stripped.lower():
-            if '<?xml' in response_stripped or '<dipg_response' in response_stripped:
-                return ResponseFormat.XML
-        
-        # Check for custom tags (contains channel markers)
-        if '<|channel|>' in response_stripped:
-            return ResponseFormat.CUSTOM_TAGS
+        # Check for XML (starts with < and contains closing tags)
+        # Relaxed check: Simply looking for plausible XML structure
+        if response_stripped.startswith('<') and '>' in response_stripped:
+             print("DEBUG: XML detected because it starts with < and has >")
+             # Basic heuristic: if it has tags, it's likely XML or Custom Tags
+             # If it has <|channel|>, it's definitely Custom Tags
+             if '<|channel|>' in response_stripped:
+                 return ResponseFormat.CUSTOM_TAGS
+             
+             # If it doesn't have custom tag markers but starts with <, assume XML
+             # This covers standard LLM output like <think>...</think>
+             return ResponseFormat.XML
+
         
         # Check for YAML (has key: value structure for required fields)
         if all(field in response_stripped for field in ['analysis:', 'proof:', 'final:']) or '```yaml' in response_stripped.lower():
@@ -159,10 +167,6 @@ class FormatParser:
                         normalized_data[target_field] = data[source]
                         break
                 # If not found, default to empty string
-                # Note: Empty fields are allowed to support partial parsing.
-                # Downstream evaluation logic in DIPGEnvironment.calculate_total_reward_from_parsed
-                # correctly handles empty strings by applying specific penalties (e.g., missing_trace_penalty)
-                # rather than generic format failures.
                 if target_field not in normalized_data:
                      normalized_data[target_field] = ""
             
@@ -176,18 +180,6 @@ class FormatParser:
         """Parse XML format with robustness for fragments and aliases"""
         cleaned_response = response.strip()
         
-        # Helper to find text in potential tags
-        def get_text(root, tags):
-            for tag in tags:
-                # Check root itself
-                if root.tag == tag:
-                    return root.text or ""
-                # Check children
-                elem = root.find(tag)
-                if elem is not None:
-                    return elem.text or ""
-            return ""
-
         try:
             # Try parsing as is
             try:
@@ -196,6 +188,22 @@ class FormatParser:
                 # failed, likely due to multiple roots (fragments). Wrap it.
                 root = ET.fromstring(f"<root>{cleaned_response}</root>")
             
+            # Helper to find text in ALL matching tags (concatenating them)
+            def get_text(root_elem, tags):
+                texts = []
+                
+                # Check root itself (rare if wrapped, but possible if single root)
+                if root_elem.tag in tags:
+                    texts.append(root_elem.text or "")
+                
+                # Check children - iterate over ALL children to maintain order
+                for child in root_elem:
+                    if child.tag in tags:
+                        texts.append(child.text or "")
+                        # Also check for tail text if needed, but usually LLM structure is clean
+                
+                return "\n".join(filter(None, texts)).strip()
+
             # Map aliases
             # analysis -> think, reasoning, analysis
             # proof -> proof, evidence
