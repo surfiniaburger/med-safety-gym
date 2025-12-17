@@ -356,7 +356,7 @@ class TaskResponse(BaseModel):
 
 class EvaluateTasksRequest(BaseModel):
     responses: List[TaskResponse]
-    format: str = "custom_tags"
+    format: str = "auto"
     dataset: Optional[str] = None
 
 
