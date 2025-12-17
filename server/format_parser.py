@@ -195,7 +195,7 @@ class FormatParser:
                     # Join all occurrences (e.g. multiple proofs)
                     # Use a space if it's single line, or newline if multiline? 
                     # Generally newline separation is safer for proofs.
-                    return "\\n".join(m.strip() for m in matches if m.strip())
+                    return "\n".join(m.strip() for m in matches if m.strip())
             return ""
 
         # Map aliases

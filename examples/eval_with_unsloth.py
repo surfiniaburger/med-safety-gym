@@ -36,10 +36,10 @@ def evaluate_model(model, tokenizer, server_url=SERVER_URL, samples=50):
     # 1. Fetch Tasks
     print(f"📥 Fetching {samples} tasks from {server_url}...")
     try:
-        response = requests.get(f"{server_url}/tasks", params={"count": samples})
+        response = requests.get(f"{server_url}/tasks", params={"count": samples}, timeout=60)
         response.raise_for_status()
         tasks = response.json()["tasks"]
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         print(f"❌ Failed to fetch tasks from server: {e}")
         print("💡 Ensure DIPG server is running: uv run uvicorn server.app:app --port 8001")
         return
@@ -71,7 +71,7 @@ def evaluate_model(model, tokenizer, server_url=SERVER_URL, samples=50):
             tokenize=True,
             return_tensors="pt",
             return_dict=True
-        ).to("cuda")
+        ).to(model.device)
 
         # Generate
         with torch.no_grad():
@@ -100,7 +100,8 @@ def evaluate_model(model, tokenizer, server_url=SERVER_URL, samples=50):
     try:
         eval_res = requests.post(
             f"{server_url}/evaluate/tasks",
-            json={"responses": responses}
+            json={"responses": responses},
+            timeout=300
         )
         eval_res.raise_for_status()
         metrics = eval_res.json()["metrics"]
@@ -112,7 +113,7 @@ def evaluate_model(model, tokenizer, server_url=SERVER_URL, samples=50):
             val = f"{v:.4f}" if isinstance(v, float) else str(v)
             print(f"{k.ljust(25)}: {val}")
             
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         print(f"❌ Grading Failed: {e}")
 
 def main():
