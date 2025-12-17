@@ -107,7 +107,7 @@ class FormatParser:
         
         # Check for Custom Tags (distinctive markers) - Prioritize this!
         if '<|channel|>' in response_stripped:
-             return ResponseFormat.CUSTOM_TAGS
+            return ResponseFormat.CUSTOM_TAGS
 
         # Check for JSON (starts with { or wrapped in markdown)
         if response_stripped.startswith('{') or '```json' in response_stripped.lower() or (response_stripped.startswith('```') and '{' in response_stripped):
