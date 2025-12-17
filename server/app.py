@@ -383,35 +383,8 @@ async def evaluate_tasks(request: EvaluateTasksRequest):
     all_tasks = env.get_eval_tasks(max_samples=None, shuffle=False)
     task_map = {task['task_id']: task for task in all_tasks}
 
-    # Debug Logging
-    print(f"DEBUG_SERVER: Received {len(request.responses)} responses")
-    if len(request.responses) > 0:
-         print(f"DEBUG_SERVER: First Id: {request.responses[0].task_id}")
-         print(f"DEBUG_SERVER: First Response RAW: {repr(request.responses[0].response[:200])}...")
-
     # Build Phase 3 Evaluation Items from Legacy Request
     evaluations = []
-    
-    # Use proper import for these classes if needed, or define locally if EvaluationItem 
-    # and GroundTruth are imported from evaluation_service (they are not currently imported!)
-    # I need to import them! I will assume they are available or define them here temporarily?
-    # No, better to import them. I'll use dict structure if I can't import easily, 
-    # but eval_manager expects EvaluationItem objects.
-    
-    # Let's rely on EvaluationItem being imported or defined.
-    # It is NOT imported currently. I will use the service's internal method or 
-    # I need to add EvaluationItem to imports.
-    
-    # Actually, let's fix imports in a separate step if needed, or assume I can mock it?
-    # No, EvaluationManager takes EvaluationItem.
-    # I'll add the imports in the PREVIOUS step? No I can't go back.
-    # I will add imports in THIS step at top of file? No, replace_file_content is contiguous.
-    
-    # Wait, check Step 3961. I imported EvaluationRequest, EvaluationManager.
-    # I did NOT import EvaluationItem or GroundTruth.
-    # I must import them for this bridge to work.
-    
-    # For now, I will define this bridge logic, and then immediately add the imports.
     
     for resp in request.responses:
         task_id = resp.task_id
@@ -448,9 +421,7 @@ async def evaluate_tasks(request: EvaluateTasksRequest):
         return {"metrics": result.model_dump()}
             
     except Exception as e:
-        logger.error(f"Evaluation failed: {e}")
-        # DEBUG: Print exact error for remote debugging
-        print(f"DEBUG_SERVER: Evaluation Failed with: {e}")
+        logger.error(f"Evaluation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
