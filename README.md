@@ -42,8 +42,32 @@ uv pip install -e .
 export DIPG_DATASET_PATH=/path/to/your/dataset.jsonl
 
 # 3. Run the server
-python -m server.app
+python -m med_safety_gym.app
 ```
+
+### 📦 PyPI Quick Start
+
+Install the base gym (lightweight, stable for Colab/Kaggle):
+
+```bash
+pip install openenv-dipg-safety
+```
+
+For advanced features (A2A Agents or MCP Server), install with extras:
+
+```bash
+# For Agent support (includes google-adk, a2a-sdk)
+pip install "openenv-dipg-safety[agent]"
+
+# For MCP support (includes fastmcp)
+pip install "openenv-dipg-safety[mcp]"
+```
+
+> [!TIP]
+> **Faster Installation**: In environments with complex dependency trees (like Kaggle or Colab), use **[uv](https://github.com/astral-sh/uv)** to avoid resolution timeouts:
+> ```bash
+> !pip install uv && !uv pip install --system openenv-dipg-safety
+> ```
 
 ## Reward Architecture Evolution
 
@@ -99,7 +123,7 @@ export EXACT_FORMAT_REWARD=10.0
 export FORMAT_MISMATCH_PENALTY=-10.0
 
 # Run the server
-python -m server.app
+python -m med_safety_gym.app
 
 # Push to huggingface
 PYTHONPATH=~/Desktop/openenv-temp-clone/src python3 -m openenv_cli push --repo-id surfiniaburger/dipg-gym
@@ -333,16 +357,23 @@ We evaluated state-of-the-art language models on the DIPG Safety Gym benchmark t
 
 | Model | Parameters | Samples | Mean Reward | Hallucination Rate | Safe Response Rate |
 |-------|------------|---------|-------------|-------------------|-------------------|
-| **GPT-OSS 20B** | 20B | 100 | **-11.30** | **28.0%** | 0.0% |
-| **GPT-OSS 120B** | 120B | 500 | -11.60 | 32.8% | 0.0% |
-| **Gemini 2.0 Flash (exp)** | Unknown | 100 | -13.45 | 71.0% | **1.0%** |
-| **Qwen3-Coder** | 480B | 100 | -13.60 | 72.0% | 0.0% |
-| **DeepSeek-V3.1** | 671B | 100 | -14.25 | **85.0%** | 0.0% |
+| **Gemini 3 Flash Preview** | Cloud | 10 | **-5.00** | **20.0%** | **40.0%** |
+| **Nemotron-3-Nano** | 30B | 10 | -6.00 | 30.0% | 40.0% |
+| **GPT-OSS 20B (Strong)** | 20B | 10 | -8.00 | 50.0% | 40.0% |
+| **MedGemma 4B** | 4B | 10 | -8.50 | 50.0% | 30.0% |
+| **Gemma 3 1B** | 1B | 10 | -8.50 | 10.0% | 10.0% |
+| **Ministral 3B** | 3B | 10 | -11.50 | 70.0% | 20.0% |
+| **GPT-OSS 20B (Base)** | 20B | 100 | -11.30 | 28.0% | 0.0% |
+| **GPT-OSS 120B (Base)** | 120B | 500 | -11.60 | 32.8% | 0.0% |
+| **Gemini 2.0 Flash (exp)** | Unknown | 100 | -13.45 | 71.0% | 1.0% |
+| **Ministral 8B** | 8B | 10 | -15.00 | 100.0% | 0.0% |
+| **DeepSeek-V3.1** | 671B | 100 | -14.25 | 85.0% | 0.0% |
 
 **Key Findings:**
-1.  **Model Size ≠ Safety**: The smallest model (GPT-OSS 20B) actually performed best, while the largest (DeepSeek 671B) performed worst.
-2.  **Universal Format Failure**: Most models achieved **0% Safe Response Rate**, failing to follow the strict safety protocol.
-3.  **High Hallucination Rates**: Models optimized for reasoning or code (DeepSeek, Qwen, Gemini) showed significantly higher hallucination rates (70-85%) compared to general models.
+1.  **Gemini 3 Flash Preview leads in Safety**: Achieving the highest mean reward (-5.00) and a **40% safe response rate**, it demonstrates superior grounding and instruction following.
+2.  **Specialized Models Punch Above Weight**: Compact models like **Gemma 3 (1B)** and **MedGemma (4B)** achieve comparable safety results to larger general-purpose models, effectively becoming the gold standard for efficient medical agents.
+3.  **Format Alignment via Strong Prompting**: Explicit XML formatting instructions ("Strong Prompt") now reliably solve syntax and channel-adherence issues across all tested models.
+4.  **Resilience to Paraphrasing**: The V4 Fuzzy Matching architecture is essential, correctly crediting models that provide accurate but slightly rephrased medical evidence, which previously triggered false-positive hallucination penalties.
 
 See [benchmark_results/BASE_MODEL_ANALYSIS.md](benchmark_results/BASE_MODEL_ANALYSIS.md) for the full analysis.
 
@@ -404,11 +435,25 @@ The A2A framework enables a seamless, conversational workflow for evaluating mod
 
 This conversational approach simplifies the evaluation process, allowing researchers to focus on model development and analysis rather than the underlying infrastructure. For a complete, runnable example, see `server/test_a2a_client.py`.
 
+## 🚀 AgentBeats & A2A Integration
+
+DIPG Safety Gym is a fully compliant **AgentBeats Green Agent** (evaluator). It follows the **Agent-to-Agent (A2A)** protocol, allowing it to autonomously assess participant agents (Purple Agents).
+
+*   **Green Server**: Host the evaluator using `python -m med_safety_gym.green_server`.
+*   **A2A Protocol**: Communicates via standard `EvalRequest` and `DataPart` artifacts.
+*   **Docker Ready**: Use `Dockerfile.green` for seamless integration into the AgentBeats ecosystem.
+
+## 📦 Deployment & Publishing
+
+The project uses modern CI/CD for reliable distribution:
+*   **Trusted Publishing**: Automated PyPI releases via GitHub Actions OIDC.
+*   **Multi-Target Docker**: Specialized images for Core, MCP, A2A, and Green Agent roles.
+
 ## Core Components
 
-*   **`models.py`**: Defines data structures (`DIPGObservation`, `DIPGAction`).
-*   **`server/dipg_environment.py`**: Core environment logic with V3 hierarchical rewards.
-*   **`server/format_parser.py`**: Handles parsing and validation of different output formats.
-*   **`server/evaluation_service.py`**: Manages batch evaluation and metrics.
-*   **`client.py`**: HTTP client for interacting with the server.
+*   **`med_safety_gym/models.py`**: Defines data structures (`DIPGObservation`, `DIPGAction`).
+*   **`med_safety_gym/dipg_environment.py`**: Core environment logic with V3 hierarchical rewards.
+*   **`med_safety_gym/format_parser.py`**: Handles parsing and validation of different output formats.
+*   **`med_safety_gym/evaluation_service.py`**: Manages batch evaluation and metrics.
+*   **`med_safety_gym/client.py`**: HTTP client for interacting with the server.
 *   **`tests/`**: Comprehensive test suite.
