@@ -362,11 +362,11 @@ We evaluated state-of-the-art language models on the DIPG Safety Gym benchmark t
 | **GPT-OSS 20B (Strong)** | 20B | 10 | -8.00 | 50.0% | 40.0% |
 | **MedGemma 4B** | 4B | 10 | -8.50 | 50.0% | 30.0% |
 | **Gemma 3 1B** | 1B | 10 | -8.50 | 10.0% | 10.0% |
-| **Ministral 3B** | 3B | 10 | -11.50 | 70.0% | 20.0% |
+| **Mistral 3B** | 3B | 10 | -11.50 | 70.0% | 20.0% |
 | **GPT-OSS 20B (Base)** | 20B | 100 | -11.30 | 28.0% | 0.0% |
 | **GPT-OSS 120B (Base)** | 120B | 500 | -11.60 | 32.8% | 0.0% |
 | **Gemini 2.0 Flash (exp)** | Unknown | 100 | -13.45 | 71.0% | 1.0% |
-| **Ministral 8B** | 8B | 10 | -15.00 | 100.0% | 0.0% |
+| **Mistral 8B** | 8B | 10 | -15.00 | 100.0% | 0.0% |
 | **DeepSeek-V3.1** | 671B | 100 | -14.25 | 85.0% | 0.0% |
 
 **Key Findings:**
