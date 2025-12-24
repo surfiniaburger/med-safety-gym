@@ -1,8 +1,8 @@
 import subprocess
 import time
 import requests
-import os
 import sys
+import shutil
 
 def run_bg_server(dataset_path=None, port=8000, timeout=60):
     """
@@ -34,7 +34,6 @@ def run_bg_server(dataset_path=None, port=8000, timeout=60):
     # We can use sys.executable -m med_safety_gym.app as a fallback
     
     # Try to find if 'dipg-server' exists in path
-    import shutil
     if not shutil.which("dipg-server"):
         print("Note: 'dipg-server' command not found in PATH, using python module fallback.")
         cmd = [sys.executable, "-m", "med_safety_gym.app", "--port", str(port)]
@@ -43,14 +42,24 @@ def run_bg_server(dataset_path=None, port=8000, timeout=60):
 
     # Redirect output to a log file so it doesn't block the notebook pipe
     log_file = "dipg_server.log"
+    
+    popen_kwargs = {
+        "stdout": None, # Will be set below
+        "stderr": subprocess.STDOUT,
+        "text": True,
+    }
+    
+    if sys.platform != "win32":
+        popen_kwargs["start_new_session"] = True
+    else:
+        # On Windows, use CREATE_NEW_PROCESS_GROUP to detach the process
+        # This constant is specifically for Windows
+        if hasattr(subprocess, "CREATE_NEW_PROCESS_GROUP"):
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+
     with open(log_file, "w") as f:
-        process = subprocess.Popen(
-            cmd,
-            stdout=f,
-            stderr=subprocess.STDOUT,
-            text=True,
-            start_new_session=True # Help prevent killing when parent dies?
-        )
+        popen_kwargs["stdout"] = f
+        process = subprocess.Popen(cmd, **popen_kwargs)
     
     # Wait for health check
     start_time = time.time()
@@ -68,9 +77,7 @@ def run_bg_server(dataset_path=None, port=8000, timeout=60):
                 is_healthy = True
                 print("✅ Server is healthy and running in the background!")
                 break
-        except requests.ConnectionError:
-            time.sleep(2)
-        except Exception:
+        except requests.exceptions.RequestException:
             time.sleep(2)
             
     if not is_healthy:
