@@ -11,7 +11,52 @@ for the environment server. Its primary job is to handle the HTTP communication:
 """
 
 import requests
-from openenv_core.http_env_client import HTTPEnvClient, StepResult
+import importlib
+
+# Robust import for openenv_core components due to potential path variations
+HTTPEnvClient = None
+StepResult = None
+
+_POSSIBLE_PATHS = [
+    'openenv_core.http_env_client',
+    'openenv.core.http_env_client',
+    'openenv_core.client_types',
+    'openenv.core.client_types',
+    'openenv_core',
+    'openenv.core'
+]
+
+_import_errors = []
+
+for path in _POSSIBLE_PATHS:
+    if HTTPEnvClient and StepResult:
+        break
+        
+    try:
+        module = importlib.import_module(path)
+        if HTTPEnvClient is None and hasattr(module, 'HTTPEnvClient'):
+            HTTPEnvClient = getattr(module, 'HTTPEnvClient')
+        if StepResult is None and hasattr(module, 'StepResult'):
+            StepResult = getattr(module, 'StepResult')
+    except (ImportError, ModuleNotFoundError) as e:
+        _import_errors.append(f"{path}: {e}")
+        continue
+
+if HTTPEnvClient is None:
+    # Fallback to prevent immediate crash, though inheritance will fail if this is None.
+    # We raise specific error to help debug.
+    error_msg = "Could not find HTTPEnvClient in openenv-core. Checked paths:\n" + "\n".join(_import_errors)
+    raise ImportError(error_msg)
+
+if StepResult is None:
+    # Fallback shim
+    class StepResult:
+        def __init__(self, observation, reward, done, info=None):
+            self.observation = observation
+            self.reward = reward
+            self.done = done
+            self.info = info or {}
+
 from .models import DIPGAction, DIPGObservation, DIPGState
 
 
