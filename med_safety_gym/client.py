@@ -237,6 +237,39 @@ class DIPGSafetyEnv(HTTPEnvClient[DIPGAction, DIPGObservation]):
         response.raise_for_status()
         
         return response.json()
+
+    def get_eval_tasks(self, max_samples: int = None, shuffle: bool = True) -> list[dict]:
+        """
+        Fetch a list of evaluation tasks from the server.
+        
+        Args:
+            max_samples: Maximum number of tasks to fetch. If None, fetches all.
+            shuffle: Whether to shuffle the tasks before returning.
+            
+        Returns:
+            List of task dictionaries containing 'task_id', 'question', 'context', etc.
+            
+        Example:
+            ```python
+            client = DIPGSafetyEnv("http://localhost:8000")
+            tasks = client.get_eval_tasks(max_samples=10)
+            for task in tasks:
+                print(task['question'])
+            ```
+        """
+        params = {"shuffle": str(shuffle).lower()}
+        if max_samples is not None:
+            params["max_samples"] = max_samples
+            
+        response = requests.get(
+            f"{self._base}/eval/tasks",
+            params=params,
+            timeout=self._timeout
+        )
+        response.raise_for_status()
+        
+        # The endpoint returns {"tasks": [...], "total_tasks": ...}
+        return response.json().get("tasks", [])
     
     def get_metrics_summary(self) -> dict:
         """
