@@ -57,9 +57,12 @@ beat.md
 mistral.md
 goog.md
 .env
-/datasets
+datasets
 sam3_agent.ipynb
 adapt_sam3_agent.ipynb
 adapt_sam3_agent.py
 sam.md
 guide-gemma-3-fine-tuning-with-tunix.ipynb
+current.md
+correct_evaluate_function.py
+fix_tutorial_2.py
