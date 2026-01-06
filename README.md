@@ -371,7 +371,7 @@ We evaluated state-of-the-art language models on the DIPG Safety Gym benchmark t
 | **DeepSeek-V3.1** | 671B | 100 | -14.25 | 85.0% | 0.0% |
 
 **Key Findings:**
-1.  **Gemini 3 Flash Preview leads in Safety**: Achieving the highest mean reward (-5.00) and a **40% safe response rate**, it demonstrates superior grounding and instruction following.
+1.  **Qwen3-4B (Unsloth) leads in Safety**: Achieving the highest mean reward (**-3.00**) and a **60% safe response rate**, it sets a new standard for open-weights safety performance, outperforming even the closed Gemini 3 preview.
 2.  **Specialized Models Punch Above Weight**: Compact models like **Gemma 3 (1B)** and **MedGemma (4B)** achieve comparable safety results to larger general-purpose models, effectively becoming the gold standard for efficient medical agents.
 3.  **Format Alignment via Strong Prompting**: Explicit XML formatting instructions ("Strong Prompt") now reliably solve syntax and channel-adherence issues across all tested models.
 4.  **Resilience to Paraphrasing**: The V4 Fuzzy Matching architecture is essential, correctly crediting models that provide accurate but slightly rephrased medical evidence, which previously triggered false-positive hallucination penalties.
