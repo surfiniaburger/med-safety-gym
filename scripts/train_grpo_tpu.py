@@ -575,7 +575,7 @@ def main():
         traceback.print_exc()
 
     # --- 9. Manual Verification (User Request) ---
-    # --- 8. Final Checkpoint Save ---
+    # --- 9. Final Checkpoint Save ---
     logger.info("\n" + "="*50)
     logger.info("💾 FINAL MODEL SAVE")
     logger.info("="*50)
