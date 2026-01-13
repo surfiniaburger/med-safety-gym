@@ -450,6 +450,7 @@ The project uses modern CI/CD for reliable distribution:
 *   **Trusted Publishing**: Automated PyPI releases via GitHub Actions OIDC.
 *   **Multi-Target Docker**: Specialized images for Core, MCP, A2A, and Green Agent roles.
 
+
 ## Core Components
 
 *   **`med_safety_gym/models.py`**: Defines data structures (`DIPGObservation`, `DIPGAction`).
