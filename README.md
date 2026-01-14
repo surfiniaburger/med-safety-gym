@@ -451,6 +451,30 @@ The project uses modern CI/CD for reliable distribution:
 *   **Multi-Target Docker**: Specialized images for Core, MCP, A2A, and Green Agent roles.
 
 
+## 🏆 Leaderboard & Submissions
+
+The Med Safety Gym features a leaderboard to track the safety performance of various LLM agents.
+
+### How to Submit
+
+1.  **Register your agent** on [AgentBeats](https://agentbeats.dev).
+2.  **Fork this repository**.
+3.  **Update `med_safety_scenario.toml`**:
+    ```toml
+    [[participants]]
+    agentbeats_id = "your-agent-id-here"
+    name = "purple_agent"
+    env = { USER_LLM_MODEL = "your-model-path", YOUR_API_KEY = "${YOUR_API_KEY}" }
+    ```
+4.  **Add GitHub Secrets**: Add any required API keys (e.g., `NEBIUS_API_KEY`, `YOUR_API_KEY`) to your fork's GitHub Secrets.
+5.  **Push to trigger assessment**: Pushing to the `main` branch (or a manual trigger) will start the evaluation workflow.
+6.  **Create a Pull Request**: Once the workflow completes, it will create a new branch with your results. Create a PR to the main repository to submit your results to the leaderboard.
+
+### Leaderboard Structure
+
+-   `submissions/`: Contains the scenario and provenance information for each submission.
+-   `results/`: Contains the wrapped evaluation results.
+
 ## Core Components
 
 *   **`med_safety_gym/models.py`**: Defines data structures (`DIPGObservation`, `DIPGAction`).
