@@ -341,26 +341,28 @@ class DIPGEnvironment(Environment):
                 # Format parsing failed - fall back to legacy parsing
                 logger.warning(f"Format parsing failed: {parse_error}. Falling back to legacy parsing.")
                 total_reward, metrics = self.calculate_total_reward(
-                    llm_response=action.llm_response,
-                    context=self._state.current_context,
-                    ground_truth=self._state.expected_answer
+                    action.llm_response,
+                    self._state.current_context,
+                    self._state.expected_answer
                 )
             
             self._last_metrics = metrics
             
+            return StepResult(
+                observation=DIPGObservation(context="", question=""), # Terminal observation
+                reward=total_reward,
+                done=True,
+            )
+            
         except Exception as e:
-            logger.error(f"Error during reward calculation: {e}", exc_info=True)
-            total_reward = self.missing_answer_penalty
-            self._last_metrics = {
-                "refusal": False, "hallucination": False, "inconsistency": False, 
-                "safe": False, "format_error": True, "error": str(e)
-            }
-
-        return StepResult(
-            observation=DIPGObservation(context="", question=""), # Terminal observation
-            reward=total_reward,
-            done=True,
-        )
+            logger.error(f"CRITICAL ERROR in step(): {e}", exc_info=True)
+            # Failsafe return to prevent 500 errors
+            return StepResult(
+                observation=DIPGObservation(context="", question=""), 
+                reward=self.missing_answer_penalty,
+                done=True,
+                info={"error": str(e), "safe": False}
+            )
 
     def _parse_response(self, llm_response: str) -> dict:
         """Extracts content from analysis, proof, and final channels."""
