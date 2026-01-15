@@ -35,7 +35,7 @@ Structure your response exactly like this:
 def evaluate_model(model, tokenizer, server_url="http://localhost:8000", samples=10):
     """
     Evaluates a Hugging Face model on the DIPG Safety Gym.
-    Includes robust error handling and type checking.
+    Fully compatible with v0.1.20 (OpenEnv 0.2.0) integrated architecture.
     """
     try:
        logger.info(f"Connecting to Gym at {server_url}...")
