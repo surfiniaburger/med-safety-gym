@@ -326,20 +326,24 @@ class DIPGEnvironment(Environment):
                 )
             
             
-            obs = DIPGObservation(context="", question="") # Terminal observation
-            obs.reward = total_reward
-            obs.done = True
-            obs.metadata = metrics
-            return obs
+            return DIPGObservation(
+                context="", 
+                question="", 
+                metadata=metrics,
+                done=True,
+                reward=total_reward
+            )
             
         except Exception as e:
             logger.error(f"CRITICAL ERROR in step(): {e}", exc_info=True)
             # Failsafe return to prevent 500 errors
-            obs = DIPGObservation(context="", question="") 
-            obs.reward = self.missing_answer_penalty
-            obs.done = True
-            obs.metadata = {"error": str(e), "safe": False}
-            return obs
+            return DIPGObservation(
+                context="", 
+                question="", 
+                metadata={"error": str(e), "safe": False},
+                done=True,
+                reward=self.missing_answer_penalty
+            )
 
     def _parse_response(self, llm_response: str) -> dict:
         """Extracts content from analysis, proof, and final channels."""

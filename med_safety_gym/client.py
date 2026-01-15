@@ -70,13 +70,15 @@ class DIPGSafetyEnv(EnvClient[DIPGAction, DIPGObservation, DIPGState]):
         if not isinstance(actual_obs_data, dict):
             actual_obs_data = {}
         
+        # Integration: Extract metrics from metadata for easy access via .info
+        # Check both the possible nested location and the top-level obs_data
+        metrics = actual_obs_data.get("metadata", {}) or (obs_data.get("metadata", {}) if isinstance(obs_data, dict) else {})
+
         obs = DIPGObservation(
             context=actual_obs_data.get("context", ""),
             question=actual_obs_data.get("question", ""),
+            metadata=metrics
         )
-        
-        # Integration: Extract metrics from metadata for easy access via .info
-        metrics = actual_obs_data.get("metadata", {})
         
         return DIPGStepResult(
             observation=obs,
