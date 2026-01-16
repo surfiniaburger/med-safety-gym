@@ -14,6 +14,7 @@ import requests
 import statistics
 import json
 import os
+import concurrent.futures
 from typing import Any, Dict, Generic, Optional, Type, TypeVar
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -103,13 +104,20 @@ class DIPGSafetyEnv(EnvClient[DIPGAction, DIPGObservation, DIPGState]):
         self,
         responses: list[str],
         response_format: str = "auto",
-        save_path: str | None = None
+        save_path: str | None = None,
+        concurrency: int = 1
     ) -> dict:
         """
         Evaluate a batch of model responses using integrated environment steps.
         
         This method performs a standard gym loop (reset + step) for each response,
         aggregating metrics directly from the StepResult.info field.
+        
+        Args:
+            responses: List of LLM-generated responses.
+            response_format: Format to expect (default 'auto').
+            save_path: Optional path to save JSON results.
+            concurrency: Number of concurrent audit threads (set > 1 for speedup).
         """
         rewards = []
         detailed_results = []
@@ -122,32 +130,77 @@ class DIPGSafetyEnv(EnvClient[DIPGAction, DIPGObservation, DIPGState]):
             "inconsistency": 0,
             "format_error": 0
         }
-        
-        for idx, response in enumerate(responses):
+
+        def _audit_task(idx_resp):
+            idx, response = idx_resp
+            # Create a dedicated client instance per thread for WebSocket safety
             try:
-                obs_result = self.reset()
-                step_result = self.step(DIPGAction(llm_response=response))
-                
-                reward = step_result.reward or 0.0
-                metrics = step_result.info
-                
-                rewards.append(reward)
-                
-                for key in metrics_counts.keys():
-                    if metrics.get(key):
-                        metrics_counts[key] += 1
-                
-                detailed_results.append({
+                with DIPGSafetyEnv(self._base, timeout=self._timeout) as local_env:
+                    obs_result = local_env.reset()
+                    step_result = local_env.step(DIPGAction(llm_response=response))
+                    
+                    reward = step_result.reward or 0.0
+                    metrics = step_result.info
+                    
+                    return {
+                        "index": idx,
+                        "response": response,
+                        "reward": reward,
+                        "metrics": metrics,
+                        "context": obs_result.observation.context,
+                        "question": obs_result.observation.question,
+                        "error": None
+                    }
+            except Exception as e:
+                return {
                     "index": idx,
                     "response": response,
-                    "reward": reward,
-                    "metrics": metrics,
-                    "context": obs_result.observation.context,
-                    "question": obs_result.observation.question
-                })
-            except Exception as e:
-                rewards.append(-1.0) 
-                detailed_results.append({"index": idx, "error": str(e), "reward": -1.0})
+                    "reward": -1.0,
+                    "metrics": {},
+                    "error": str(e)
+                }
+
+        # Weighted execution: Use ThreadPool for high concurrency
+        if concurrency > 1:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
+                raw_results = list(executor.map(_audit_task, enumerate(responses)))
+        else:
+            # Re-use current connection if sequential (no overhead)
+            raw_results = []
+            for idx, response in enumerate(responses):
+                try:
+                    obs_result = self.reset()
+                    step_result = self.step(DIPGAction(llm_response=response))
+                    metrics = step_result.info
+                    raw_results.append({
+                        "index": idx,
+                        "response": response,
+                        "reward": step_result.reward or 0.0,
+                        "metrics": metrics,
+                        "context": obs_result.observation.context,
+                        "question": obs_result.observation.question,
+                        "error": None
+                    })
+                except Exception as e:
+                    raw_results.append({
+                        "index": idx,
+                        "response": response,
+                        "reward": -1.0,
+                        "metrics": {},
+                        "error": str(e)
+                    })
+
+        # Process and aggregate results
+        for res in raw_results:
+            reward = res["reward"]
+            rewards.append(reward)
+            metrics = res["metrics"]
+            
+            for key in metrics_counts.keys():
+                if metrics.get(key):
+                    metrics_counts[key] += 1
+            
+            detailed_results.append(res)
 
         total = len(responses)
         result = {

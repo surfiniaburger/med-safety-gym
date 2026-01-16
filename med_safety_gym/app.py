@@ -136,7 +136,14 @@ def get_environment() -> DIPGEnvironment:
     return env
 
 # Fix: openenv_core expects an instance, not a factory function
-app = create_app(get_environment, DIPGAction, DIPGObservation, env_name="dipg_safety_env")
+# We increase max_concurrent_envs to 16 to support fast parallel audits
+app = create_app(
+    get_environment, 
+    DIPGAction, 
+    DIPGObservation, 
+    env_name="dipg_safety_env",
+    max_concurrent_envs=16
+)
 
 @app.get("/eval/tasks")
 async def get_eval_tasks(max_samples: int = None, shuffle: bool = True):

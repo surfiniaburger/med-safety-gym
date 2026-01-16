@@ -62,6 +62,17 @@ class FormatParser:
             r'<\|channel\|>(\w+)<\|message\|>(.*?)<\|end\|>',
             re.DOTALL
         )
+        # Cache for XML-like tag extraction (improves speed during batch audits)
+        self._xml_tag_cache = {}
+
+    def _get_xml_pattern(self, tag: str):
+        if tag not in self._xml_tag_cache:
+            # Regex for <tag>CONTENT</tag> or <tag attr="...">CONTENT</tag>
+            self._xml_tag_cache[tag] = re.compile(
+                f"<{tag}(?:\\s+[^>]*)?>(.*?)</{tag}>",
+                re.IGNORECASE | re.DOTALL
+            )
+        return self._xml_tag_cache[tag]
     
     def parse(
         self,
@@ -125,7 +136,6 @@ class FormatParser:
         # But we must ensure it's not actually custom tags (already checked above)
         if response_stripped.startswith('<') and '>' in response_stripped:
              return ResponseFormat.XML
-
         
         # Check for YAML (has key: value structure for required fields)
         if all(field in response_stripped for field in ['analysis:', 'proof:', 'final:']) or '```yaml' in response_stripped.lower():
@@ -187,14 +197,10 @@ class FormatParser:
         def extract_content(tags: list[str]) -> str:
             # Try each tag alias
             for tag in tags:
-                # Regex for <tag>CONTENT</tag> or <tag attr="...">CONTENT</tag>
-                # Using dotall to capture newlines
-                pattern = f"<{tag}(?:\\s+[^>]*)?>(.*?)</{tag}>"
-                matches = re.findall(pattern, cleaned_response, re.IGNORECASE | re.DOTALL)
+                pattern = self._get_xml_pattern(tag)
+                matches = pattern.findall(cleaned_response)
                 if matches:
                     # Join all occurrences (e.g. multiple proofs)
-                    # Use a space if it's single line, or newline if multiline? 
-                    # Generally newline separation is safer for proofs.
                     return "\n".join(m.strip() for m in matches if m.strip())
             return ""
 
