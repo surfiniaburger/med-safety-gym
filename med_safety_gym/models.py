@@ -41,6 +41,7 @@ class DIPGObservation(BaseObservation if IS_PYDANTIC_BASE else BaseModel):
         
     context: str = ""
     question: str = ""
+    metrics: Dict[str, Any] = Field(default_factory=dict)
 
 class DIPGState(BaseState if IS_PYDANTIC_BASE else BaseModel):
     """The internal state of the environment for tracking the current challenge."""

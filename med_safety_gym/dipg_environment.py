@@ -326,13 +326,15 @@ class DIPGEnvironment(Environment):
                 )
             
             
-            return DIPGObservation(
+            obs = DIPGObservation(
                 context="", 
                 question="", 
                 metadata=metrics,
+                metrics=metrics,
                 done=True,
                 reward=total_reward
             )
+            return obs
             
         except Exception as e:
             logger.error(f"CRITICAL ERROR in step(): {e}", exc_info=True)

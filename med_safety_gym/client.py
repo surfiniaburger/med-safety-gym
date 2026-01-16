@@ -62,7 +62,7 @@ class DIPGSafetyEnv(EnvClient[DIPGAction, DIPGObservation, DIPGState]):
 
     def _parse_result(self, payload: dict) -> DIPGStepResult:
         """Parses server response into structured DIPGStepResult."""
-        obs_data = payload.get("observation")
+        obs_data = payload.get("observation", {})
 
         if isinstance(obs_data, dict) and "observation" in obs_data:
             actual_obs_data = obs_data.get("observation")
@@ -72,14 +72,16 @@ class DIPGSafetyEnv(EnvClient[DIPGAction, DIPGObservation, DIPGState]):
         if not isinstance(actual_obs_data, dict):
             actual_obs_data = {}
         
-        # Integration: Extract metrics from metadata for easy access via .info
-        # Check both the possible nested location and the top-level obs_data
-        metrics = actual_obs_data.get("metadata", {}) or (obs_data.get("metadata", {}) if isinstance(obs_data, dict) else {})
+        # Integration: Extract metrics for easy access via .info
+        # First check the new 'metrics' field (bypassing openenv-core stripping of 'metadata')
+        # Then fallback to 'metadata' if it exists.
+        metrics = actual_obs_data.get("metrics", {}) or actual_obs_data.get("metadata", {}) or (obs_data.get("metadata", {}) if isinstance(obs_data, dict) else {})
 
         obs = DIPGObservation(
             context=actual_obs_data.get("context", ""),
             question=actual_obs_data.get("question", ""),
-            metadata=metrics
+            metadata=metrics,
+            metrics=metrics
         )
         
         return DIPGStepResult(
