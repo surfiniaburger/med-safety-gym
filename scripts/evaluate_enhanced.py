@@ -1,14 +1,13 @@
-import asyncio
 import json
 import logging
+import traceback
 from med_safety_gym.client import DIPGSafetyEnv
-from med_safety_gym.models import DIPGAction
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def run_comprehensive_verification(server_url="http://localhost:8000"):
+def run_comprehensive_verification(server_url="http://localhost:8000"):
     print(f"=== Starting Comprehensive Release Verification for v0.1.20 ===")
     print(f"Targeting Gym Server at: {server_url}")
     
@@ -90,7 +89,6 @@ async def run_comprehensive_verification(server_url="http://localhost:8000"):
                 
             except Exception as e:
                 print(f"❌ FAILED: evaluate_model error: {e}")
-                import traceback
                 traceback.print_exc()
 
     except Exception as e:
@@ -102,4 +100,4 @@ async def run_comprehensive_verification(server_url="http://localhost:8000"):
     print("="*50)
 
 if __name__ == "__main__":
-    asyncio.run(run_comprehensive_verification())
+    run_comprehensive_verification()

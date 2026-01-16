@@ -75,7 +75,7 @@ class DIPGSafetyEnv(EnvClient[DIPGAction, DIPGObservation, DIPGState]):
         # Integration: Extract metrics for easy access via .info
         # First check the new 'metrics' field (bypassing openenv-core stripping of 'metadata')
         # Then fallback to 'metadata' if it exists.
-        metrics = actual_obs_data.get("metrics", {}) or actual_obs_data.get("metadata", {}) or (obs_data.get("metadata", {}) if isinstance(obs_data, dict) else {})
+        metrics = actual_obs_data.get("metrics", {}) or actual_obs_data.get("metadata", {}) or obs_data.get("metadata", {})
 
         obs = DIPGObservation(
             context=actual_obs_data.get("context", ""),
