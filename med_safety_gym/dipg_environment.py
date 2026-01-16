@@ -2,6 +2,8 @@
 
 import json
 import random
+import time
+import threading
 from pathlib import Path
 import importlib
 
@@ -141,9 +143,12 @@ class DIPGEnvironment(Environment):
         else:
             self.dataset = self._load_dataset(dataset_path)
             
+        # Use a local random instance for thread safety and independent session shuffling
+        self._rng = random.Random(time.time_ns())
         self._shuffled_indices = list(range(len(self.dataset)))
-        random.shuffle(self._shuffled_indices)
+        self._rng.shuffle(self._shuffled_indices)
         self._dataset_index = 0
+        self._lock = threading.Lock()
         
         # Metrics storage
 
@@ -266,57 +271,108 @@ class DIPGEnvironment(Environment):
     def reset(self) -> DIPGObservation:
         """
         Picks the next challenge from the shuffled dataset.
+        Uses file-based locking to ensure unique indices across processes/threads.
         """
-        max_attempts = len(self._shuffled_indices)
-        if not max_attempts:
-            raise RuntimeError("Dataset is empty, cannot reset.")
-
-        for _ in range(max_attempts):
-            if self._dataset_index >= len(self._shuffled_indices):
-                random.shuffle(self._shuffled_indices)
-                self._dataset_index = 0
-
-            idx = self._shuffled_indices[self._dataset_index]
-            challenge = self.dataset[idx]
-            self._dataset_index += 1
-
+        import fcntl
+        import os
+        import sys
+        
+        # Use a persistent file in a fixed location for better reliability
+        state_dir = "/tmp/med_safety_state"
+        os.makedirs(state_dir, exist_ok=True)
+        
+        lock_file = os.path.join(state_dir, "lock")
+        index_file = os.path.join(state_dir, "index")
+        indices_file = os.path.join(state_dir, "indices")
+        
+        # Ensure files are created with proper permissions
+        with open(lock_file, "a+") as lock_f:
+            fcntl.flock(lock_f, fcntl.LOCK_EX)
             try:
-                user_content = challenge['messages'][0]['content']
-                assistant_content = challenge['messages'][1]['content']
-
-                # Parse user_content to get context and question
-                # Try Markdown format first
-                context_match = self._re_context_md.search(user_content)
-                question_match = self._re_question_md.search(user_content)
+                # Initialize indices if they don't exist
+                if not os.path.exists(indices_file):
+                    indices = list(range(len(self.dataset)))
+                    # Use a fixed seed for the initial shuffle to be deterministic across processes
+                    # but still shuffled.
+                    r = random.Random(42)
+                    r.shuffle(indices)
+                    with open(indices_file, "w") as f:
+                        json.dump(indices, f)
+                else:
+                    with open(indices_file, "r") as f:
+                        indices = json.load(f)
                 
-                # Try XML tags (New Format)
-                if not context_match:
-                    context_match = self._re_context_xml.search(user_content)
-                if not question_match:
-                    question_match = self._re_question_xml.search(user_content)
+                # Initialize index if it doesn't exist
+                if not os.path.exists(index_file):
+                    current_idx_in_shuffle = 0
+                else:
+                    with open(index_file, "r") as f:
+                        content = f.read().strip()
+                        current_idx_in_shuffle = int(content) if content else 0
+                
+                # Pick the index
+                if current_idx_in_shuffle >= len(indices):
+                    # Reshuffle
+                    last_idx = indices[-1] if indices else None
+                    self._rng.shuffle(indices)
+                    if len(indices) > 1 and indices[0] == last_idx:
+                        indices[0], indices[1] = indices[1], indices[0]
+                    with open(indices_file, "w") as f:
+                        json.dump(indices, f)
+                    current_idx_in_shuffle = 0
+                
+                idx = indices[current_idx_in_shuffle]
+                
+                # Update index for next call
+                with open(index_file, "w") as f:
+                    f.write(str(current_idx_in_shuffle + 1))
+                
+                # LOGGING TO STDERR FOR DEBUGGING
+                sys.stderr.write(f"DEBUG: [PID {os.getpid()}] reset() -> idx={idx}, next={current_idx_in_shuffle + 1}\n")
+                sys.stderr.flush()
+                
+            finally:
+                fcntl.flock(lock_f, fcntl.LOCK_UN)
 
-                proof_match = self._re_proof_md.search(user_content)
+        # Now we have our unique idx, proceed with loading the challenge
+        try:
+            challenge = self.dataset[idx]
+            user_content = challenge['messages'][0]['content']
+            assistant_content = challenge['messages'][1]['content']
 
-                context = context_match.group(1).strip() if context_match else ""
-                question = question_match.group(1).strip() if question_match else ""
-                proof = proof_match.group(1).strip() if proof_match else ""
+            # Parse user_content to get context and question
+            # Try Markdown format first
+            context_match = self._re_context_md.search(user_content)
+            question_match = self._re_question_md.search(user_content)
+            
+            # Try XML tags (New Format)
+            if not context_match:
+                context_match = self._re_context_xml.search(user_content)
+            if not question_match:
+                question_match = self._re_question_xml.search(user_content)
 
-                if context and question:
-                    self._state = DIPGState(
-                        current_context=context,
-                        current_question=question,
-                        expected_answer={"final": assistant_content, "proof": proof}
-                    )
-                    obs = DIPGObservation(context=context, question=question)
-                    obs.reward = None
-                    obs.done = False
-                    return obs
+            proof_match = self._re_proof_md.search(user_content)
 
-                logger.warning(f"Could not parse using Markdown or XML at index {idx}. Skipping.")
-            except (KeyError, IndexError) as e:
-                logger.warning(f"Malformed message structure in dataset, skipping. Error: {e}")
+            context = context_match.group(1).strip() if context_match else ""
+            question = question_match.group(1).strip() if question_match else ""
+            proof = proof_match.group(1).strip() if proof_match else ""
 
-        raise RuntimeError(f"Could not find a valid entry in the dataset after {max_attempts} attempts.")
+            if context and question:
+                self._state = DIPGState(
+                    current_context=context,
+                    current_question=question,
+                    expected_answer={"final": assistant_content, "proof": proof}
+                )
+                obs = DIPGObservation(context=context, question=question)
+                obs.reward = None
+                obs.done = False
+                return obs
+
+            logger.warning(f"Could not parse using Markdown or XML at index {idx}. Skipping.")
+        except (KeyError, IndexError) as e:
+            logger.warning(f"Malformed message structure in dataset, skipping. Error: {e}")
+
+        raise RuntimeError(f"Could not find a valid entry in the dataset at index {idx}.")
     
     def step(self, action: DIPGAction) -> DIPGObservation:
         logger.info(f"Received action: {action.llm_response}")

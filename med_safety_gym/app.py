@@ -2,11 +2,14 @@
 import os
 import sys
 import logging
+import threading
 from openenv.core.env_server import create_app
 from .dipg_environment import DIPGEnvironment
 from .format_parser import ResponseFormat
 from .models import DIPGAction, DIPGObservation
 from .evaluation_service import EvaluationRequest, EvaluationManager, EvaluationItem, GroundTruth, EvaluationResult
+
+# ... (rest of the imports and constants)
 
 # Get the configurable rewards from environment variables.
 CONFLICT_REWARD = float(os.environ.get("CONFLICT_REWARD", 10.0))
@@ -47,8 +50,6 @@ MAX_EVALUATION_ITEMS = 1000
 # Config and Global State
 _CONFIG = {}
 _GLOBAL_DATASET = None
-_GLOBAL_INDICES = None
-_GLOBAL_INDEX = 0
 
 def get_config():
     """Lazily parse configuration from environment or CLI."""
@@ -69,7 +70,6 @@ def get_config():
 def get_global_dataset():
     """Lazily load the dataset shared across requests."""
     global _GLOBAL_DATASET
-    global _GLOBAL_INDICES
     if _GLOBAL_DATASET is None:
         config = get_config()
         # Create a temporary environment just to load the dataset
@@ -83,26 +83,14 @@ def get_global_dataset():
             analysis_channel_start="", proof_channel_start="", final_channel_start="", channel_end=""
         )
         _GLOBAL_DATASET = temp_env.dataset
-        _GLOBAL_INDICES = list(range(len(_GLOBAL_DATASET)))
-        import random
-        random.shuffle(_GLOBAL_INDICES)
     return _GLOBAL_DATASET
 
 def get_environment() -> DIPGEnvironment:
-    """Creates a new environment instance for each request to ensure thread safety."""
-    global _GLOBAL_INDEX
+    """Creates a new environment instance for each request."""
     config = get_config()
     dataset = get_global_dataset()
     
-    # We want each request to potentially get a different sample
-    # So we rotate the global index
-    current_idx = _GLOBAL_INDEX
-    if _GLOBAL_INDICES:
-         _GLOBAL_INDEX = (_GLOBAL_INDEX + 1) % len(_GLOBAL_INDICES)
-    
-    logging.info(f"DEBUG: get_environment - current_idx: {current_idx}, next _GLOBAL_INDEX: {_GLOBAL_INDEX}, indices: {_GLOBAL_INDICES}")
-    
-    env = DIPGEnvironment(
+    return DIPGEnvironment(
         dataset_path=config["dataset_path"],
         dataset=dataset,
         conflict_reward=CONFLICT_REWARD,
@@ -127,22 +115,15 @@ def get_environment() -> DIPGEnvironment:
         channel_end=CHANNEL_END,
         response_format=RESPONSE_FORMAT,
     )
-    
-    # Force the environment to use the global index we selected
-    if _GLOBAL_INDICES:
-        env._shuffled_indices = _GLOBAL_INDICES
-        env._dataset_index = current_idx
-        
-    return env
 
 # Fix: openenv_core expects an instance, not a factory function
-# We increase max_concurrent_envs to 16 to support fast parallel audits
+# We increase max_concurrent_envs to 100 to support fast parallel audits
 app = create_app(
     get_environment, 
     DIPGAction, 
     DIPGObservation, 
     env_name="dipg_safety_env",
-    max_concurrent_envs=16
+    max_concurrent_envs=100
 )
 
 @app.get("/eval/tasks")

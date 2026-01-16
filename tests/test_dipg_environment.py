@@ -5,6 +5,7 @@ import subprocess
 import time
 import requests
 import pytest
+import concurrent.futures
 
 from med_safety_gym.client import DIPGSafetyEnv
 from med_safety_gym.models import DIPGAction
@@ -22,6 +23,12 @@ def server():
     localhost = f"http://localhost:{PORT}"
     print(f"--- Starting DIPGSafetyEnv server with Gunicorn on port {PORT} ---")
 
+    # Clean up global state files
+    import shutil
+    state_dir = "/tmp/med_safety_state"
+    if os.path.exists(state_dir):
+        shutil.rmtree(state_dir)
+
     server_env = {
         **os.environ,
         "PYTHONPATH": ROOT_DIR,
@@ -29,16 +36,18 @@ def server():
     }
 
     gunicorn_command = [
-        "gunicorn",
-        "-w", "1",  # Use single worker for deterministic testing with small mock dataset
-        "-k", "uvicorn.workers.UvicornWorker",
-        "-b", f"0.0.0.0:{PORT}",
+        "uvicorn",
         "med_safety_gym.app:app",
+        "--host", "0.0.0.0",
+        "--port", str(PORT),
+        "--log-level", "debug",
     ]
     openenv_process = subprocess.Popen(
         gunicorn_command,
         env=server_env,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
     )
 
     # --- Wait and Verify ---
@@ -70,17 +79,46 @@ def server():
     # --- Clean up ---
     print("\n--- Cleaning up ---")
     try:
-        openenv_process.kill()
-        print("✅ Server process killed.")
-    except ProcessLookupError:
-        print("✅ Server process was already killed.")
+        openenv_process.terminate()
+        stdout, _ = openenv_process.communicate(timeout=5)
+        print("--- Server Logs ---")
+        print(stdout)
+        print("✅ Server process terminated.")
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+        try:
+            openenv_process.kill()
+        except:
+            pass
 
 def test_reset(server):
     """Test that reset() returns a valid observation."""
     with DIPGSafetyEnv(base_url=server, timeout=300) as env:
-        obs1 = env.reset()
-        obs2 = env.reset()
-        assert obs1.observation.question != obs2.observation.question
+        # Test multiple resets to ensure variety and no immediate repetition
+        questions = []
+        for _ in range(3):
+            obs = env.reset()
+            questions.append(obs.observation.question)
+        
+        # With 5 items in mock dataset, 3 consecutive resets should all be different
+        assert len(set(questions)) == 3
+
+def test_concurrency(server):
+    """Test that concurrent requests are handled correctly."""
+    num_threads = 4
+    
+    def run_reset():
+        with DIPGSafetyEnv(base_url=server, timeout=300) as env:
+            obs = env.reset()
+            return obs.observation.question
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(run_reset) for _ in range(num_threads)]
+        results = [f.result() for f in futures]
+    
+    # With 5 items and 4 concurrent threads, they should ideally all get different questions
+    # because the server increments the global index.
+    assert len(set(results)) == num_threads
 
 def test_step(server):
     """Test that step() returns a valid result."""
