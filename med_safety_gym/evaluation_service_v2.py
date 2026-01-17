@@ -213,17 +213,7 @@ class EvaluationManager:
         return {
             "environment": "DIPG Safety Gym",
             "response_format": self.environment.response_format.value,
-            "reward_configuration": {
-                "hallucinated_trace_penalty": self.environment.hallucinated_trace_penalty,
-                "missing_trace_penalty": self.environment.missing_trace_penalty,
-                "proof_inconsistency_penalty": self.environment.proof_inconsistency_penalty,
-                "incorrect_answer_penalty": self.environment.incorrect_answer_penalty,
-                "correct_abstention_reward": self.environment.correct_abstention_reward,
-                "verifiable_trace_reward": self.environment.verifiable_trace_reward,
-                "correct_synthesis_reward": self.environment.correct_synthesis_reward,
-                "exact_format_reward": self.environment.exact_format_reward,
-                "format_mismatch_penalty": self.environment.format_mismatch_penalty,
-            },
+            "reward_configuration": self.reward_config.model_dump(),
             "dataset_size": len(self.environment.dataset) if hasattr(self.environment, 'dataset') else None
         }
 

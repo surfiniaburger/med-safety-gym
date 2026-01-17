@@ -5,6 +5,7 @@ This module contains stateless functions for calculating rewards and validating
 model responses. All functions are extracted from DIPGEnvironment to enable
 standalone, client-side evaluation without requiring a running server.
 """
+import re
 import difflib
 from typing import Tuple, Dict, Optional
 from .models import ParsedResponse, RewardConfig
@@ -222,7 +223,6 @@ def is_correct_synthesis(final_text: str, ground_truth_final: str) -> bool:
     Returns:
         True if the answers match (exact or fuzzy)
     """
-    import re
     
     # CRITICAL FIX: Extract answer from XML tags if present in ground truth
     gt_cleaned = ground_truth_final.strip()

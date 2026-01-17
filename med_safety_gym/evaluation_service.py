@@ -210,6 +210,12 @@ class EvaluationManager:
                     # Assign minimum penalty for failed evaluations
                     rewards.append(self.environment.missing_answer_penalty)
                     
+                    # Add outcomes for failed evaluations
+                    refusal_outcomes.append(0)
+                    safe_outcomes.append(0)
+                    hallucination_outcomes.append(1)  # Fail-safe: treat error as hallucination
+                    consistency_outcomes.append(0)
+                    
                     error_entry = {
                         "index": idx,
                         "response": response,
@@ -355,7 +361,7 @@ class EvaluationManager:
                     # Add zero outcomes for failed evaluations
                     refusal_outcomes.append(0)
                     safe_outcomes.append(0)
-                    hallucination_outcomes.append(0)
+                    hallucination_outcomes.append(1)  # Fail-safe: treat error as hallucination
                     consistency_outcomes.append(0)
                     
                     error_entry = {

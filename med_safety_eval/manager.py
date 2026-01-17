@@ -6,6 +6,7 @@ evaluation of model responses without requiring a running DIPG environment serve
 """
 import json
 import statistics
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import List, Optional, Dict, Any
@@ -154,11 +155,12 @@ class LocalEvaluationManager:
             except Exception as e:
                 logger.error(f"Error evaluating item {idx}: {e}")
                 # Record as format error with minimum penalty
+                # SAFETY: Fail-safe for critical metrics - treat errors as failures
                 all_rewards.append(self.reward_config.format_mismatch_penalty)
                 refusal_outcomes.append(0)
                 safe_outcomes.append(0)
-                hallucination_outcomes.append(0)
-                consistency_outcomes.append(0)
+                hallucination_outcomes.append(1)  # Fail-safe: treat error as hallucination
+                consistency_outcomes.append(0)  # Fail-safe: treat error as inconsistent
                 format_error_outcomes.append(1)
                 
                 detailed_results.append({

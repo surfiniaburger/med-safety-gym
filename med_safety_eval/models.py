@@ -91,4 +91,6 @@ class ResponseFormat(str, Enum):
     AUTO = "auto"
     CUSTOM_TAGS = "custom_tags"  # <think>...</think>, <proof>...</proof>, <answer>...</answer>
     XML = "xml"                  # Alias for custom_tags
-    # Future formats can be added here, e.g., JSON, YAML
+    JSON = "json"
+    YAML = "yaml"
+
