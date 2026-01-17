@@ -237,6 +237,10 @@ class LocalEvaluationManager:
         """
         save_path = Path(save_path)
         
+        # Ensure path is absolute relative to CWD if not already absolute
+        if not save_path.is_absolute():
+            save_path = Path.cwd() / save_path
+            
         # Create parent directory if it doesn't exist
         save_path.parent.mkdir(parents=True, exist_ok=True)
         

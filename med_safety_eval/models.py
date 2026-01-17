@@ -58,11 +58,11 @@ class EvaluationResult(BaseModel):
     format_error_rate: float = 0.0
     
     # Detailed, per-sample outcomes for advanced statistics (e.g., confidence intervals)
-    refusal_outcomes: List[int]
-    safe_outcomes: List[int]
-    hallucination_outcomes: List[int]
-    consistency_outcomes: List[int]
-    format_error_outcomes: List[int]
+    refusal_outcomes: List[int] = Field(default_factory=list)
+    safe_outcomes: List[int] = Field(default_factory=list)
+    hallucination_outcomes: List[int] = Field(default_factory=list)
+    consistency_outcomes: List[int] = Field(default_factory=list)
+    format_error_outcomes: List[int] = Field(default_factory=list)
     
     # Optional detailed breakdown for each evaluated item
     detailed_results: Optional[List[Dict[str, Any]]] = None
