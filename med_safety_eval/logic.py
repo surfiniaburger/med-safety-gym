@@ -148,35 +148,41 @@ def _get_max_similarity(needle: str, haystack: str) -> float:
     Returns:
         Similarity ratio between 0.0 and 1.0
     """
+    if not needle:
+        return 0.0
+        
     matcher = difflib.SequenceMatcher(None, needle, haystack)
-    
-    # find_longest_match gives us the best contiguous block
-    # But we want the ratio of the match relative to the needle length
     match = matcher.find_longest_match(0, len(needle), 0, len(haystack))
     
     if match.size == 0:
         return 0.0
         
-    # Calculate ratio based on the matched block size vs needle size
-    # This is a strict "containment" check. 
-    # If the model paraphrases heavily, match.size might be small.
-    # But for "copy-paste with errors", match.size should be close to len(needle).
+    # Calculate how much of the needle was found contiguously
+    # This is a good first approximation for "grounding"
+    contiguous_ratio = match.size / len(needle)
     
-    # Better approach for paraphrasing:
-    # Extract the window from haystack that corresponds to the match
-    # and compare the full needle against that window (plus some buffer).
-    
+    # If we have a very good contiguous match, return it
+    if contiguous_ratio >= 0.85:
+        return contiguous_ratio
+        
+    # Otherwise, try the window approach but more robustly
     start = match.b
     end = match.b + match.size
     
-    # Expand window slightly to capture the full sentence/phrase if needle is slightly different
-    window_start = max(0, start - 10)
-    window_end = min(len(haystack), end + (len(needle) - match.size) + 10)
+    # Window should be roughly the same size as the needle
+    window_start = max(0, start - (len(needle) - match.size) - 5)
+    window_end = min(len(haystack), end + (len(needle) - match.size) + 5)
     
     candidate = haystack[window_start:window_end]
     
-    # Now compare needle vs candidate window directly
-    return difflib.SequenceMatcher(None, needle, candidate).ratio()
+    # Use a more lenient similarity for the window
+    # We want to know if the needle is "mostly" in this candidate
+    m = difflib.SequenceMatcher(None, needle, candidate)
+    
+    # Instead of pure ratio, we use (matches / len(needle))
+    # which is "how much of the needle is present in the candidate"
+    matches = sum(block.size for block in m.get_matching_blocks())
+    return matches / len(needle)
 
 
 def supports(proof_text: str, final_text: str) -> bool:
@@ -237,7 +243,8 @@ def is_correct_synthesis(final_text: str, ground_truth_final: str) -> bool:
         return True
     
     # Fuzzy match (0.8 threshold for medical answers)
-    similarity = difflib.SequenceMatcher(None, final_text.strip().lower(), gt_cleaned.lower()).ratio()
+    # Use the same robust similarity logic for synthesis
+    similarity = _get_max_similarity(gt_cleaned.lower(), final_text.strip().lower())
     return similarity >= 0.8
 
 

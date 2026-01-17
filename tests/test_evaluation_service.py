@@ -5,7 +5,8 @@ Tests for evaluation_service.py
 import pytest
 import json
 from pathlib import Path
-from med_safety_gym.evaluation_service import EvaluationManager, EvaluationRequest, EvaluationResult
+from med_safety_gym.evaluation_service_v2 import EvaluationManager, EvaluationRequest
+from med_safety_eval import EvaluationResult
 from med_safety_gym.dipg_environment import DIPGEnvironment
 from med_safety_gym.format_parser import ResponseFormat
 
