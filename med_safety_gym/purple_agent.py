@@ -64,15 +64,15 @@ class PurpleAgent:
 
             # Combine reasoning and content if both are present
             # This is useful for models like DeepSeek-R1
-            final_output = ""
+            # Combine reasoning and content if both are present
+            # This is useful for models like DeepSeek-R1
+            parts = []
             if reasoning_text:
-                final_output += f"<think>\n{reasoning_text}\n</think>\n"
-            
+                parts.append(f"<think>\n{reasoning_text}\n</think>\n")
             if response_text:
-                final_output += response_text
+                parts.append(response_text)
             
-            if not final_output:
-                final_output = "The model returned an empty response."
+            final_output = "".join(parts) or "The model returned an empty response."
 
             # Return the raw model output as the final message for the green agent to evaluate.
             await updater.complete(new_agent_text_message(final_output))
