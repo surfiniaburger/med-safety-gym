@@ -1,5 +1,3 @@
-
-
 import pytest
 from med_safety_eval import FormatParser, ResponseFormat, ParsedResponse
 
@@ -13,7 +11,7 @@ def test_format_detection_xml():
     parser = FormatParser()
     xml_response = "<think>thinking</think><proof>quote</proof><answer>answer</answer>"
     detected = parser._detect_format(xml_response)
-    assert detected == ResponseFormat.CUSTOM_TAGS
+    assert detected == ResponseFormat.XML
 
 def test_format_detection_yaml():
     parser = FormatParser()
@@ -33,7 +31,7 @@ def test_parse_json_with_aliases():
 def test_parse_xml_case_insensitive():
     parser = FormatParser()
     xml_response = "<THINK>thinking</THINK><PROOF>quote</PROOF><ANSWER>answer</ANSWER>"
-    parsed = parser.parse(xml_response, ResponseFormat.CUSTOM_TAGS)
+    parsed = parser.parse(xml_response, ResponseFormat.XML)
     assert parsed.analysis == "thinking"
     assert parsed.proof == "quote"
     assert parsed.final == "answer"
@@ -56,7 +54,6 @@ def test_parse_auto_xml():
 def test_parse_error_missing_final():
     parser = FormatParser()
     xml_response = "<think>thinking</think><proof>quote</proof>"
-    parsed = parser.parse(xml_response, ResponseFormat.CUSTOM_TAGS)
+    parsed = parser.parse(xml_response, ResponseFormat.XML)
     assert parsed.format_error
     assert "FORMAT_ERROR" in parsed.final
-

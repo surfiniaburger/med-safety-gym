@@ -23,6 +23,11 @@ class FormatParser:
             "proof": re.compile(r"<(?:proof|trace|evidence|quote)>(.*?)</(?:proof|trace|evidence|quote)>", re.DOTALL | re.IGNORECASE),
             "final": re.compile(r"<(?:answer|final|conclusion|result)>(.*?)</(?:answer|final|conclusion|result)>", re.DOTALL | re.IGNORECASE),
         }
+        # Regex pattern for custom tag format (backward compatibility)
+        self.custom_tag_pattern = re.compile(
+            r'<\|channel\|>(\w+)<\|message\|>(.*?)<\|end\|>',
+            re.DOTALL
+        )
 
     def parse(
         self,
@@ -49,38 +54,44 @@ class FormatParser:
         if format_type == ResponseFormat.AUTO:
             format_type = self._detect_format(response_text)
 
-        if format_type in [ResponseFormat.CUSTOM_TAGS, ResponseFormat.XML]:
-            return self._parse_custom_tags(response_text)
+        if format_type == ResponseFormat.CUSTOM_TAGS:
+            return self._parse_custom_tags_legacy(response_text)
+        elif format_type in [ResponseFormat.XML]:
+            return self._parse_xml_tags(response_text)
         elif format_type == ResponseFormat.JSON:
             return self._parse_json(response_text)
         elif format_type == ResponseFormat.YAML:
             return self._parse_yaml(response_text)
         
-        # Fallback to custom tags
-        return self._parse_custom_tags(response_text)
+        # Fallback to XML tags
+        return self._parse_xml_tags(response_text)
 
     def _detect_format(self, response: str) -> ResponseFormat:
         """Auto-detect the format of the response"""
         response_stripped = response.strip()
         
+        # Check for Custom Tags (distinctive markers)
+        if '<|channel|>' in response_stripped:
+            return ResponseFormat.CUSTOM_TAGS
+
         # Check for JSON (starts with { or wrapped in markdown)
         if response_stripped.startswith('{') or '```json' in response_stripped.lower() or (response_stripped.startswith('```') and '{' in response_stripped):
             return ResponseFormat.JSON
         
         # Check for XML/Custom Tags (contains closing tags)
         if '</' in response_stripped and '>' in response_stripped:
-             return ResponseFormat.CUSTOM_TAGS
+             return ResponseFormat.XML
         
         # Check for YAML (has key: value structure for required fields)
         if all(field in response_stripped for field in ['analysis:', 'proof:', 'final:']) or '```yaml' in response_stripped.lower():
             return ResponseFormat.YAML
         
-        # Default to custom tags
-        return ResponseFormat.CUSTOM_TAGS
+        # Default to XML tags
+        return ResponseFormat.XML
 
-    def _parse_custom_tags(self, response_text: str) -> ParsedResponse:
+    def _parse_xml_tags(self, response_text: str) -> ParsedResponse:
         """
-        Parses a response expected to contain custom XML-like tags.
+        Parses a response expected to contain XML-like tags.
         """
         extracted: Dict[str, Optional[str]] = {}
         for key, pattern in self.tag_patterns.items():
@@ -106,6 +117,38 @@ class FormatParser:
             final=extracted["final"],
             original_response=response_text,
             format_error=False,
+        )
+
+    def _parse_custom_tags_legacy(self, response_text: str) -> ParsedResponse:
+        """
+        Parses a response using the legacy <|channel|> format.
+        """
+        channels = {}
+        for match in self.custom_tag_pattern.finditer(response_text):
+            channel_name = match.group(1)
+            content = match.group(2).strip()
+            channels[channel_name] = content
+        
+        # Map to expected fields
+        analysis = channels.get("analysis")
+        proof = channels.get("proof")
+        final = channels.get("final")
+
+        if final is None:
+            return ParsedResponse(
+                analysis=analysis,
+                proof=proof,
+                final=f"FORMAT_ERROR: Missing final channel in custom tags. Original: {response_text}",
+                original_response=response_text,
+                format_error=True
+            )
+
+        return ParsedResponse(
+            analysis=analysis,
+            proof=proof,
+            final=final,
+            original_response=response_text,
+            format_error=False
         )
 
     def _parse_json(self, response_text: str) -> ParsedResponse:

@@ -184,17 +184,21 @@ class EvaluationManager:
         logger.info(f"Evaluating batch of {len(evaluations)} items with ground truth (V2 - stateless mode)")
         
         # Convert to med_safety_eval format
-        eval_items = [
-            EvalItem(
-                response=item.response,
-                ground_truth=GT(
-                    context=item.ground_truth.context,
-                    question=item.ground_truth.question,
-                    expected_answer=item.ground_truth.expected_answer
+        eval_items = []
+        for item in evaluations:
+            if item.ground_truth is None:
+                raise ValueError(f"Ground truth is required for stateless evaluation (item with response '{item.response[:50]}...')")
+            
+            eval_items.append(
+                EvalItem(
+                    response=item.response,
+                    ground_truth=GT(
+                        context=item.ground_truth.context,
+                        question=item.ground_truth.question,
+                        expected_answer=item.ground_truth.expected_answer
+                    )
                 )
             )
-            for item in evaluations
-        ]
         
         # Delegate to standalone evaluator
         return self.local_evaluator.evaluate_batch(

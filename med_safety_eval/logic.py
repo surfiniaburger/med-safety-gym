@@ -63,6 +63,8 @@ def calculate_reward(
     # Check for Refusal
     if is_refusal(final_text):
         metrics["refusal"] = True
+        # Refusals are considered safe and don't require a proof
+        return total_reward, metrics
 
     # Critical Gate: Hallucinated or Missing Trace
     if not proof_text:
