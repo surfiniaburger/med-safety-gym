@@ -78,13 +78,13 @@ class FormatParser:
         if response_stripped.startswith('{') or '```json' in response_stripped.lower() or (response_stripped.startswith('```') and '{' in response_stripped):
             return ResponseFormat.JSON
         
-        # Check for XML/Custom Tags (contains closing tags)
-        if '</' in response_stripped and '>' in response_stripped:
-             return ResponseFormat.XML
-        
         # Check for YAML (has key: value structure for required fields)
         if all(field in response_stripped for field in ['analysis:', 'proof:', 'final:']) or '```yaml' in response_stripped.lower():
             return ResponseFormat.YAML
+
+        # Check for XML/Custom Tags (contains closing tags)
+        if '</' in response_stripped and '>' in response_stripped:
+             return ResponseFormat.XML
         
         # Default to XML tags
         return ResponseFormat.XML
@@ -123,11 +123,10 @@ class FormatParser:
         """
         Parses a response using the legacy <|channel|> format.
         """
-        channels = {}
-        for match in self.custom_tag_pattern.finditer(response_text):
-            channel_name = match.group(1)
-            content = match.group(2).strip()
-            channels[channel_name] = content
+        channels = {
+            match.group(1): match.group(2).strip()
+            for match in self.custom_tag_pattern.finditer(response_text)
+        }
         
         # Map to expected fields
         analysis = channels.get("analysis")
