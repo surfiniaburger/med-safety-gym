@@ -65,4 +65,4 @@ visualization = [
 dipg-server = "med_safety_gym.app:main"
 
 [tool.setuptools]
-packages = ["med_safety_gym", "tests"]  # Includes your gym and test modules
+packages = ["med_safety_gym", "med_safety_eval", "tests"]  # Includes gym, eval, and test modules

@@ -17,7 +17,7 @@ from a2a.types import Message, TaskState, Part, TextPart, DataPart
 from a2a.utils import get_message_text, new_agent_text_message
 
 from .app import get_environment
-from .evaluation_service import EvaluationManager, EvaluationItem, GroundTruth
+from .evaluation_service_v2 import EvaluationManager, EvaluationItem, GroundTruth
 from .messenger import Messenger
 
 logger = logging.getLogger(__name__)

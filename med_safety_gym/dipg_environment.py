@@ -515,7 +515,6 @@ class DIPGEnvironment(Environment):
         gt_cleaned = ground_truth_final.strip()
         
         # Remove XML tags from ground truth (e.g., <answer>54 Gy</answer> -> 54 Gy)
-        import re
         gt_match = re.search(r'<answer>(.*?)</answer>', gt_cleaned, re.DOTALL | re.IGNORECASE)
         if gt_match:
             gt_cleaned = gt_match.group(1).strip()
