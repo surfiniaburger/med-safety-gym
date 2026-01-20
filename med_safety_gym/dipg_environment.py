@@ -351,23 +351,6 @@ class DIPGEnvironment(Environment):
                 reward=self.missing_answer_penalty
             )
 
-    def _parse_response(self, llm_response: str) -> dict:
-        """Extracts content from analysis, proof, and final channels."""
-        channels = {}
-        channel_map = {
-            'analysis': self.analysis_channel_start,
-            'proof': self.proof_channel_start,
-            'final': self.final_channel_start,
-        }
-        for name, start_tag in channel_map.items():
-            start_index = llm_response.find(start_tag)
-            if start_index != -1:
-                start_index += len(start_tag)
-                end_index = llm_response.find(self.channel_end, start_index)
-                if end_index != -1:
-                    channels[name] = llm_response[start_index:end_index].strip()
-        return channels
-
     def calculate_total_reward(self, llm_response: str, context: str, ground_truth: dict) -> tuple[float, dict]:
         """Legacy reward calculation method, now delegating to centralized logic."""
         try:
@@ -502,7 +485,7 @@ class DIPGEnvironment(Environment):
     
     def calculate_total_reward_from_parsed(
         self,
-        parsed_response,
+        parsed_response: ParsedResponse,
         context: str,
         ground_truth: dict
     ) -> tuple[float, dict]:
@@ -530,31 +513,6 @@ class DIPGEnvironment(Environment):
             exact_format_reward=self.exact_format_reward,
             no_hallucination_reward=self.no_hallucination_reward
         )
-
-        # Convert to ParsedResponse if it's not already (for backward compatibility)
-        if not hasattr(parsed_response, 'analysis'):
-            # This handles cases where a dict might have been passed in legacy code
-            parsed_response = ParsedResponse(
-                analysis=parsed_response.get('analysis', ""),
-                proof=parsed_response.get('proof', ""),
-                final=parsed_response.get('final', ""),
-                original_response="",
-                format_error=False
-            )
-        else:
-            # It's a DIPGResponse or ParsedResponse, ensure it has format_error
-            # med_safety_eval.logic expects an object with format_error attribute
-            if not hasattr(parsed_response, 'format_error'):
-                # Create a wrapper or just add the attribute if it's a Pydantic model
-                # DIPGResponse from format_parser.py doesn't have format_error
-                # We'll convert it to med_safety_eval.models.ParsedResponse
-                parsed_response = ParsedResponse(
-                    analysis=parsed_response.analysis,
-                    proof=parsed_response.proof,
-                    final=parsed_response.final,
-                    original_response="",
-                    format_error=False
-                )
 
         # Delegate to centralized logic
         return calculate_reward(

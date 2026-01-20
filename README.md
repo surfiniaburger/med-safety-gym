@@ -106,7 +106,7 @@ The latest V4 update refines the verification logic to be fairer to robust model
 *   **Problem 1 (Paraphrasing)**: V3 required character-perfect copying in the `proof` channel. High-quality models that slightly summarized or rephrased the context were unfairly penalized as "hallucinating."
 *   **Problem 2 (Abstention Paradox)**: Correct refusals (stating info is missing) were being marked as "Hallucinations" because the model could not provide a direct quote for something that doesn't exist.
 *   **Solution**: 
-    1.  **Fuzzy Matching**: The `is_grounded` check now uses **fuzzy string matching** (`difflib`). It accepts a proof if it is at least **80% similar** to any substring in the original context.
+    1.  **Fuzzy Matching**: The `is_grounded` check now uses **fuzzy string matching** (`difflib`). It accepts a proof if it is at least **85% similar** to any substring in the original context.
     2.  **Abstention Priority**: The logic now checks for **Correct Abstention** (model and ground truth both agree info is missing) *before* grounding checks. This ensures safe refusals are rewarded, not penalized.
     3.  **Additive Rewards**: V4 integrates both V1 and V2 reward structures, providing a strong, multi-layered signal for safety.
 
