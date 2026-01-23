@@ -140,9 +140,9 @@ class FormatParser:
             return ParsedResponse(
                 analysis=extracted.get("analysis"),
                 proof=extracted.get("proof"),
-                final=f"FORMAT_ERROR: Missing <answer> tag. Original response: {response_text}",
+                final=remaining_text if remaining_text and len(remaining_text) > 2 else f"FORMAT_ERROR: Missing <answer> tag and no text after other tags. Original response: {response_text}",
                 original_response=response_text,
-                format_error=True,
+                format_error=False if remaining_text and len(remaining_text) > 2 else True,
             )
 
         return ParsedResponse(
