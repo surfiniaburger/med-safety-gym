@@ -26,8 +26,8 @@ const App: React.FC = () => {
         try {
           const parsed = JSON.parse(saved);
           loadedHistory = parsed.map((item: any) => ({
-              ...item,
-              timestamp: new Date(item.timestamp)
+            ...item,
+            timestamp: new Date(item.timestamp)
           }));
         } catch (e) {
           console.error("Failed to load history", e);
@@ -39,27 +39,27 @@ const App: React.FC = () => {
       } else {
         // If no history (new user or cleared), load examples
         try {
-           const exampleUrls = [
-               'https://storage.googleapis.com/sideprojects-asronline/bringanythingtolife/vibecode-blog.json',
-               'https://storage.googleapis.com/sideprojects-asronline/bringanythingtolife/cassette.json',
-               'https://storage.googleapis.com/sideprojects-asronline/bringanythingtolife/chess.json'
-           ];
+          const exampleUrls = [
+            'https://storage.googleapis.com/sideprojects-asronline/bringanythingtolife/vibecode-blog.json',
+            'https://storage.googleapis.com/sideprojects-asronline/bringanythingtolife/cassette.json',
+            'https://storage.googleapis.com/sideprojects-asronline/bringanythingtolife/chess.json'
+          ];
 
-           const examples = await Promise.all(exampleUrls.map(async (url) => {
-               const res = await fetch(url);
-               if (!res.ok) return null;
-               const data = await res.json();
-               return {
-                   ...data,
-                   timestamp: new Date(data.timestamp || Date.now()),
-                   id: data.id || crypto.randomUUID()
-               };
-           }));
-           
-           const validExamples = examples.filter((e): e is Creation => e !== null);
-           setHistory(validExamples);
+          const examples = await Promise.all(exampleUrls.map(async (url) => {
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            const data = await res.json();
+            return {
+              ...data,
+              timestamp: new Date(data.timestamp || Date.now()),
+              id: data.id || crypto.randomUUID()
+            };
+          }));
+
+          const validExamples = examples.filter((e): e is Creation => e !== null);
+          setHistory(validExamples);
         } catch (e) {
-            console.error("Failed to load examples", e);
+          console.error("Failed to load examples", e);
         }
       }
     };
@@ -70,11 +70,11 @@ const App: React.FC = () => {
   // Save history when it changes
   useEffect(() => {
     if (history.length > 0) {
-        try {
-            localStorage.setItem('gemini_app_history', JSON.stringify(history));
-        } catch (e) {
-            console.warn("Local storage full or error saving history", e);
-        }
+      try {
+        localStorage.setItem('gemini_app_history', JSON.stringify(history));
+      } catch (e) {
+        console.warn("Local storage full or error saving history", e);
+      }
     }
   }, [history]);
 
@@ -111,7 +111,7 @@ const App: React.FC = () => {
       }
 
       const html = await bringToLife(promptText, imageBase64, mimeType);
-      
+
       if (html) {
         const newCreation: Creation = {
           id: crypto.randomUUID(),
@@ -152,35 +152,35 @@ const App: React.FC = () => {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-        try {
-            const json = event.target?.result as string;
-            const parsed = JSON.parse(json);
-            
-            // Basic validation
-            if (parsed.html && parsed.name) {
-                const importedCreation: Creation = {
-                    ...parsed,
-                    timestamp: new Date(parsed.timestamp || Date.now()),
-                    id: parsed.id || crypto.randomUUID()
-                };
-                
-                // Add to history if not already there (by ID check)
-                setHistory(prev => {
-                    const exists = prev.some(c => c.id === importedCreation.id);
-                    return exists ? prev : [importedCreation, ...prev];
-                });
+      try {
+        const json = event.target?.result as string;
+        const parsed = JSON.parse(json);
 
-                // Set as active immediately
-                setActiveCreation(importedCreation);
-            } else {
-                alert("Invalid creation file format.");
-            }
-        } catch (err) {
-            console.error("Import error", err);
-            alert("Failed to import creation.");
+        // Basic validation
+        if (parsed.html && parsed.name) {
+          const importedCreation: Creation = {
+            ...parsed,
+            timestamp: new Date(parsed.timestamp || Date.now()),
+            id: parsed.id || crypto.randomUUID()
+          };
+
+          // Add to history if not already there (by ID check)
+          setHistory(prev => {
+            const exists = prev.some(c => c.id === importedCreation.id);
+            return exists ? prev : [importedCreation, ...prev];
+          });
+
+          // Set as active immediately
+          setActiveCreation(importedCreation);
+        } else {
+          alert("Invalid creation file format.");
         }
-        // Reset input
-        if (importInputRef.current) importInputRef.current.value = '';
+      } catch (err) {
+        console.error("Import error", err);
+        alert("Failed to import creation.");
+      }
+      // Reset input
+      if (importInputRef.current) importInputRef.current.value = '';
     };
     reader.readAsText(file);
   };
@@ -189,47 +189,47 @@ const App: React.FC = () => {
 
   return (
     <div className="h-[100dvh] bg-zinc-950 bg-dot-grid text-zinc-50 selection:bg-blue-500/30 overflow-y-auto overflow-x-hidden relative flex flex-col">
-      
+
       {/* Centered Content Container */}
-      <div 
+      <div
         className={`
           min-h-full flex flex-col w-full max-w-7xl mx-auto px-4 sm:px-6 relative z-10 
           transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1)
-          ${isFocused 
-            ? 'opacity-0 scale-95 blur-sm pointer-events-none h-[100dvh] overflow-hidden' 
+          ${isFocused
+            ? 'opacity-0 scale-95 blur-sm pointer-events-none h-[100dvh] overflow-hidden'
             : 'opacity-100 scale-100 blur-0'
           }
         `}
       >
         {/* Main Vertical Centering Wrapper */}
         <div className="flex-1 flex flex-col justify-center items-center w-full py-12 md:py-20">
-          
+
           {/* 1. Hero Section */}
           <div className="w-full mb-8 md:mb-16">
-              <Hero />
+            <Hero />
           </div>
 
           {/* 2. Input Section */}
           <div className="w-full flex justify-center mb-8">
-              <InputArea onGenerate={handleGenerate} isGenerating={isGenerating} disabled={isFocused} />
+            <InputArea onGenerate={handleGenerate} isGenerating={isGenerating} disabled={isFocused} />
           </div>
 
         </div>
-        
+
         {/* 3. History Section & Footer - Stays at bottom */}
         <div className="flex-shrink-0 pb-6 w-full mt-auto flex flex-col items-center gap-6">
-            <div className="w-full px-2 md:px-0">
-                <CreationHistory history={history} onSelect={handleSelectCreation} />
-            </div>
-            
-            <a 
-              href="https://x.com/ammaar" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-zinc-600 hover:text-zinc-400 text-xs font-mono transition-colors pb-2"
-            >
-              Created by @ammaar
-            </a>
+          <div className="w-full px-2 md:px-0">
+            <CreationHistory history={history} onSelect={handleSelectCreation} />
+          </div>
+
+          <a
+            href="https://github.com/surfiniaburger"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-zinc-600 hover:text-zinc-400 text-xs font-mono transition-colors pb-2"
+          >
+            Created by @surfiniaburger
+          </a>
         </div>
       </div>
 
@@ -243,20 +243,20 @@ const App: React.FC = () => {
 
       {/* Subtle Import Button (Bottom Right) */}
       <div className="fixed bottom-4 right-4 z-50">
-        <button 
-            onClick={handleImportClick}
-            className="flex items-center space-x-2 p-2 text-zinc-500 hover:text-zinc-300 transition-colors opacity-60 hover:opacity-100"
-            title="Import Artifact"
+        <button
+          onClick={handleImportClick}
+          className="flex items-center space-x-2 p-2 text-zinc-500 hover:text-zinc-300 transition-colors opacity-60 hover:opacity-100"
+          title="Import Artifact"
         >
-            <span className="text-xs font-medium uppercase tracking-wider hidden sm:inline">Upload previous artifact</span>
-            <ArrowUpTrayIcon className="w-5 h-5" />
+          <span className="text-xs font-medium uppercase tracking-wider hidden sm:inline">Upload previous artifact</span>
+          <ArrowUpTrayIcon className="w-5 h-5" />
         </button>
-        <input 
-            type="file" 
-            ref={importInputRef} 
-            onChange={handleImportFile} 
-            accept=".json" 
-            className="hidden" 
+        <input
+          type="file"
+          ref={importInputRef}
+          onChange={handleImportFile}
+          accept=".json"
+          className="hidden"
         />
       </div>
     </div>
