@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, AlertCircle, CheckCircle2, FlaskConical, ArrowRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib-web/utils';
 import { EvaluationArtifact } from '@/services/github';
 
 interface ResultSelectorProps {
