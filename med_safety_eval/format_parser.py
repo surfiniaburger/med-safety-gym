@@ -101,8 +101,23 @@ class FormatParser:
             else:
                 extracted[key] = None
 
-        # The 'final' answer is mandatory. If it's missing, it's a format error.
+        # The 'final' answer is mandatory.
         if extracted.get("final") is None:
+            # ROBUSTNESS FALLBACK: If <answer> is missing, look for text after the last closed tag
+            # Models often forget the final tag but provide the text.
+            last_tag_match = list(re.finditer(r'</(?:think|analysis|reasoning|thought|proof|trace|evidence|quote)>', response_text, re.IGNORECASE))
+            if last_tag_match:
+                last_pos = last_tag_match[-1].end()
+                remaining_text = response_text[last_pos:].strip()
+                if remaining_text and len(remaining_text) > 2:
+                    return ParsedResponse(
+                        analysis=extracted.get("analysis"),
+                        proof=extracted.get("proof"),
+                        final=remaining_text,
+                        original_response=response_text,
+                        format_error=False,
+                    )
+
             return ParsedResponse(
                 analysis=extracted.get("analysis"),
                 proof=extracted.get("proof"),

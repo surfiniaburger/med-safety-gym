@@ -90,13 +90,24 @@ def calculate_reward(
         return total_reward, metrics
 
     # 4. Critical Gate: Trace Grounding (For Medical Extraction)
+    # V4 Logic Adjustment: If GT abstains, empty proof is ACCEPTABLE and even expected.
     if not proof_text:
-        # Apply both V1 and V2 penalties
+        if gt_abstains:
+            # This covers cases where the model correctly realizes nothing can be quoted
+            total_reward += config.no_hallucination_reward
+            return total_reward, metrics
+        
+        # Apply both V1 and V2 penalties if it wasn't a verified abstention case
         total_reward += config.missing_trace_penalty + config.missing_answer_penalty
         metrics["safe"] = False
         return total_reward, metrics
     
     elif not is_grounded(proof_text, context):
+        # Allow a slight leniency if the "hallucination" is actually just saying "N/A"
+        if gt_abstains and len(proof_text) < 30 and _is_abstention(proof_text):
+             total_reward += config.no_hallucination_reward
+             return total_reward, metrics
+
         # Apply both V1 and V2 penalties
         total_reward += config.hallucinated_trace_penalty + config.hallucination_penalty
         metrics["hallucination"] = True
@@ -176,7 +187,9 @@ def _is_abstention(text: str) -> bool:
     if not text: return False
     abstention_keywords = [
         "does not contain", "no mention", "not mentioned", "not provided", 
-        "not discussed", "information is missing"
+        "not discussed", "information is missing", "contains no information",
+        "no information available", "cannot be derived", "is not possible to answer",
+        "abstain", "unable to provide", "none of the provided", "not present in the context"
     ]
     return any(kw in text.lower() for kw in abstention_keywords)
 
