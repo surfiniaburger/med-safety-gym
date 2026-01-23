@@ -22,6 +22,16 @@ const GITHUB_OWNER = 'surfiniaburger';
 const GITHUB_REPO = 'med-safety-gym';
 const RESULTS_PATH = 'results';
 
+interface GitHubContent {
+    name: string;
+    path: string;
+    sha: string;
+    type: string;
+    url: string;
+    html_url: string;
+    download_url: string;
+}
+
 export async function fetchEvaluationArtifacts(): Promise<EvaluationArtifact[]> {
     try {
         // 1. Fetch list of files in the results directory
@@ -44,14 +54,16 @@ export async function fetchEvaluationArtifacts(): Promise<EvaluationArtifact[]> 
             return [];
         }
 
-        // 2. Filter for .json files
-        const jsonFiles = files.filter((file: any) => file.name.endsWith('.json') && file.type === 'file');
+        // 2. Filter for .json files with type guard
+        const jsonFiles = files.filter((file: any): file is GitHubContent =>
+            typeof file.name === 'string' &&
+            file.name.endsWith('.json') &&
+            file.type === 'file'
+        );
 
         // 3. Fetch content for each file
-        // Note: We're doing this in parallel, but be mindful of rate limits if there are many files.
-        // For a demo/small scale, this is fine.
         const artifacts: EvaluationArtifact[] = await Promise.all(
-            jsonFiles.map(async (file: any) => {
+            jsonFiles.map(async (file) => {
                 const artifact: EvaluationArtifact = {
                     id: file.sha,
                     name: file.name,

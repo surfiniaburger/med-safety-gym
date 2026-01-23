@@ -50,7 +50,14 @@ export const ResultSelector = ({ artifacts, onSelect, isLoading }: ResultSelecto
     );
 };
 
-const BentoCard = ({ artifact, onSelect, className }: { artifact: EvaluationArtifact; onSelect: () => void; className?: string }) => {
+interface BentoCardProps {
+    artifact: EvaluationArtifact;
+    onSelect: () => void;
+    className?: string;
+    // key is handled by React
+}
+
+const BentoCard: React.FC<BentoCardProps> = ({ artifact, onSelect, className }) => {
     const content = artifact.content;
     const status = content?.status || 'UNKNOWN';
 
@@ -90,7 +97,7 @@ const BentoCard = ({ artifact, onSelect, className }: { artifact: EvaluationArti
                     {artifact.name.replace('.json', '').replace(/-/g, ' ')}
                 </h3>
                 <p className="text-sm text-white/50 line-clamp-2 mt-2 leading-relaxed">
-                    {content?.summary || "Clinical evaluation results for safety and reliability analysis in pediatric oncology environments."}
+                    {content?.summary || "No summary available."}
                 </p>
             </div>
 
