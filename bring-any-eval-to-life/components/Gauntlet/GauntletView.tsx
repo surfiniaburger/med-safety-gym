@@ -29,6 +29,25 @@ enum GauntletState {
     TRAJECTORY_ACTIVE
 }
 
+// Phase 14: Constants extracted from magic numbers
+const PATH_SPACING = 3;
+const REWARD_Y_SCALE = 0.4;
+
+interface GauntletContextValue {
+    agentPosition: THREE.Vector3;
+    agentProgress: number;
+    setAgentState: (pos: THREE.Vector3, progress: number) => void;
+    onComplete?: () => void;
+}
+
+const GauntletContext = React.createContext<GauntletContextValue | null>(null);
+
+const useGauntlet = () => {
+    const context = React.useContext(GauntletContext);
+    if (!context) throw new Error("useGauntlet must be used within GauntletProvider");
+    return context;
+};
+
 const Starfield = () => {
     const starCount = 3000;
     const positions = useMemo(() => {
@@ -191,6 +210,8 @@ const PathAgent = ({
         }
     }, [currentIndex]);
 
+    const { setAgentState, onComplete } = useGauntlet();
+
     useFrame((state, delta) => {
         if (isPaused) return;
 
@@ -204,8 +225,8 @@ const PathAgent = ({
             if (floorIndex > currentIndex) {
                 onProgress(floorIndex);
             }
-            if (nextProgress >= points.length - 1 && typeof (window as any).onGauntletComplete === 'function') {
-                (window as any).onGauntletComplete();
+            if (nextProgress >= points.length - 1 && typeof onComplete === 'function') {
+                onComplete();
             }
         }
     });
@@ -220,11 +241,10 @@ const PathAgent = ({
         return new THREE.Vector3().lerpVectors(points[idx], points[nextIdx], lerp);
     }, [progress, points]);
 
-    // Update global for camera tracking
+    // Update context for camera tracking
     useEffect(() => {
-        (window as any).agentPosition = currentPos;
-        (window as any).agentProgress = progress;
-    }, [currentPos, progress]);
+        setAgentState(currentPos, progress);
+    }, [currentPos, progress, setAgentState]);
 
     return (
         <group position={currentPos}>
@@ -251,19 +271,16 @@ const PathAgent = ({
 };
 
 const CinematicCamera = () => {
-    const cameraRef = useRef<THREE.PerspectiveCamera>(null);
+    const { agentPosition, agentProgress } = useGauntlet();
 
     useFrame((state) => {
-        const agentPos = (window as any).agentPosition as THREE.Vector3;
-        const progress = (window as any).agentProgress as number;
-
-        if (agentPos && cameraRef.current) {
-            const offset = getCameraOffset(progress);
-            const targetPos = agentPos.clone().add(offset);
+        if (agentPosition) {
+            const offset = getCameraOffset(agentProgress);
+            const targetPos = agentPosition.clone().add(offset);
 
             // Smoothly lerp camera to target position
             state.camera.position.lerp(targetPos, 0.05);
-            state.camera.lookAt(agentPos);
+            state.camera.lookAt(agentPosition);
         }
     });
 
@@ -271,7 +288,7 @@ const CinematicCamera = () => {
 };
 
 const NeuralPathway = ({ points, rewards, solvedNodes }: { points: THREE.Vector3[], rewards: number[], solvedNodes: number[] }) => {
-    const progress = (window as any).agentProgress || 0;
+    const { agentProgress } = useGauntlet();
 
     return (
         <group>
@@ -283,7 +300,7 @@ const NeuralPathway = ({ points, rewards, solvedNodes }: { points: THREE.Vector3
             />
             {/* Active glowing segment */}
             <Line
-                points={points.slice(0, Math.ceil(progress + 1))}
+                points={points.slice(0, Math.ceil(agentProgress + 1))}
                 color="#4dabf7"
                 lineWidth={2}
                 transparent
@@ -336,12 +353,6 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
     onClose,
     onComplete
 }) => {
-    // Expose completion to the inner component via a global (simplest for R3F bridge)
-    useEffect(() => {
-        (window as any).onGauntletComplete = onComplete;
-        return () => { (window as any).onGauntletComplete = null; };
-    }, [onComplete]);
-
     if (!rewards || rewards.length === 0) {
         return (
             <div className="w-full h-full bg-[#050505] flex flex-col items-center justify-center p-6 text-center">
@@ -369,11 +380,10 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
         );
     }
 
-    const spacing = 3;
     const points = useMemo(() => {
         // Phase 14: Midline centering - rewards are scaled to +/- range but centered on Y=0
-        return rewards.map((r, i) => new THREE.Vector3(i * spacing, r * 0.4, 0));
-    }, [rewards, spacing]);
+        return rewards.map((r, i) => new THREE.Vector3(i * PATH_SPACING, r * REWARD_Y_SCALE, 0));
+    }, [rewards]);
 
     const currentReward = rewards[activeStepIndex];
     const isFailedNode = currentReward < 0 && !solvedNodes.includes(activeStepIndex);
@@ -409,53 +419,73 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
         lastSolvedCount.current = solvedNodes.length;
     }, [solvedNodes]);
 
+    // State for context
+    const [agentPosition, setAgentPosition] = useState(new THREE.Vector3());
+    const [agentProgress, setAgentProgress] = useState(0);
+
+    // Memoize setAgentState to prevent re-creating on every render
+    const setAgentState = React.useCallback((pos: THREE.Vector3, progress: number) => {
+        setAgentPosition(pos);
+        setAgentProgress(progress);
+    }, []);
+
+    // Memoize context value to prevent unnecessary re-renders of consumers
+    const contextValue = React.useMemo(() => ({
+        agentPosition,
+        agentProgress,
+        setAgentState,
+        onComplete
+    }), [agentPosition, agentProgress, setAgentState, onComplete]);
+
     return (
         <div className="w-full h-full relative font-sans select-none overflow-hidden">
             {/* Cinematic Camera Control */}
             <Canvas shadows dpr={[1, 2]}>
-                <CinematicCamera />
-                <PerspectiveCamera makeDefault position={[-20, 10, 20]} />
-                <Starfield />
+                <GauntletContext.Provider value={contextValue}>
+                    <CinematicCamera />
+                    <PerspectiveCamera makeDefault position={[-20, 10, 20]} />
+                    <Starfield />
 
-                <WarmupAgents state={gameState} />
+                    <WarmupAgents state={gameState} />
 
-                <OrbitControls
-                    enablePan={true}
-                    minDistance={5}
-                    maxDistance={100}
-                    makeDefault
-                    dampingFactor={0.05}
-                    enableDamping
-                />
+                    <OrbitControls
+                        enablePan={true}
+                        minDistance={5}
+                        maxDistance={100}
+                        makeDefault
+                        dampingFactor={0.05}
+                        enableDamping
+                    />
 
-                <color attach="background" args={['#050505']} />
-                <fog attach="fog" args={['#050505', 10, 100]} />
+                    <color attach="background" args={['#050505']} />
+                    <fog attach="fog" args={['#050505', 10, 100]} />
 
-                <ambientLight intensity={0.5} />
-                <pointLight position={[10, 10, 10]} intensity={1.5} color="#4dabf7" castShadow />
-                <directionalLight position={[-5, 5, 5]} intensity={0.5} color="#ffffff" />
+                    <ambientLight intensity={0.5} />
+                    <pointLight position={[10, 10, 10]} intensity={1.5} color="#4dabf7" castShadow />
+                    <directionalLight position={[-5, 5, 5]} intensity={0.5} color="#ffffff" />
 
-                {(gameState === GauntletState.TRAJECTORY_ACTIVE || gameState === GauntletState.TRANSITION) && (
-                    <>
-                        <NeuralPathway points={points} rewards={rewards} solvedNodes={solvedNodes} />
+                    {(gameState === GauntletState.TRAJECTORY_ACTIVE || gameState === GauntletState.TRANSITION) && (
+                        <>
+                            <NeuralPathway points={points} rewards={rewards} solvedNodes={solvedNodes} />
 
-                        {points.map((p, i) => (
-                            rewards[i] < 0 && (
-                                <BarrierNode key={`barrier-${i}`} position={p} active={!solvedNodes.includes(i)} />
-                            )
-                        ))}
+                            {points.map((p, i) => (
+                                rewards[i] < 0 && (
+                                    <BarrierNode key={`barrier-${i}`} position={p} active={!solvedNodes.includes(i)} />
+                                )
+                            ))}
 
-                        <PathAgent
-                            points={points}
-                            rewards={rewards}
-                            currentIndex={activeStepIndex}
-                            isPaused={isInternalPaused}
-                            onProgress={onActiveStepChange}
-                        />
+                            <PathAgent
+                                points={points}
+                                rewards={rewards}
+                                currentIndex={activeStepIndex}
+                                isPaused={isInternalPaused}
+                                onProgress={onActiveStepChange}
+                            />
 
-                        <ContactShadows opacity={0.4} scale={100} blur={2} far={10} resolution={256} color="#000000" />
-                    </>
-                )}
+                            <ContactShadows opacity={0.4} scale={100} blur={2} far={10} resolution={256} color="#000000" />
+                        </>
+                    )}
+                </GauntletContext.Provider>
             </Canvas>
 
             {/* UI Overlays */}
