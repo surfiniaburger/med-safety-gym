@@ -22,8 +22,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GauntletView } from './components/Gauntlet/GauntletView';
 import { extractRewards } from './lib-web/extraction';
 import { calculateSafetyStats, SafetyStats } from './lib-web/stats';
+import { ToastProvider, useToast } from './components/Toast';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [activeCreation, setActiveCreation] = useState<Creation | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<Creation[]>([]);
@@ -33,6 +34,7 @@ const App: React.FC = () => {
   const [solvedNodes, setSolvedNodes] = useState<number[]>([]);
   const [isMissionComplete, setIsMissionComplete] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
 
   // Fetch evaluation artifacts
@@ -96,7 +98,7 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to generate:", error);
-      alert("Something went wrong while bringing your file to life. Please try again.");
+      showToast("Something went wrong while bringing your file to life. Please try again.", "error");
     } finally {
       setIsGenerating(false);
     }
@@ -153,7 +155,7 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to generate simulation:", error);
-      alert("Failed to generate clinical simulation. Please try again.");
+      showToast("Failed to generate clinical simulation. Please try again.", "error");
     } finally {
       setIsGenerating(false);
     }
@@ -407,6 +409,14 @@ const App: React.FC = () => {
         />
       </div>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 };
 
