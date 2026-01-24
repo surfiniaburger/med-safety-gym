@@ -87,7 +87,6 @@ export async function fetchEvaluationArtifacts(): Promise<EvaluationArtifact[]> 
                             const base64Content = fileData.content.replace(/\s/g, '');
                             const decodedString = atob(base64Content);
                             artifact.content = JSON.parse(decodedString) as EvaluationContent;
-                            console.log(`Successfully fetched and decoded content for ${file.name}`, artifact.content);
                         } else {
                             console.error(`Received no content from API for ${file.name}`);
                         }

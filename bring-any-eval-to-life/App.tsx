@@ -34,9 +34,6 @@ const App: React.FC = () => {
   const [isMissionComplete, setIsMissionComplete] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    console.log("App View changed to:", view, "with activeArtifact:", activeArtifact?.name);
-  }, [view, activeArtifact]);
 
   // Fetch evaluation artifacts
   const { data: artifacts = [], isLoading: isLoadingArtifacts } = useQuery({
@@ -44,11 +41,6 @@ const App: React.FC = () => {
     queryFn: fetchEvaluationArtifacts,
   });
 
-  useEffect(() => {
-    if (artifacts.length > 0) {
-      console.log("React Query: Artifacts updated", artifacts);
-    }
-  }, [artifacts]);
 
   // Load history from local storage or fetch examples on mount
   useEffect(() => {
@@ -111,13 +103,11 @@ const App: React.FC = () => {
   };
 
   const handleSelectArtifact = async (artifact: EvaluationArtifact) => {
-    console.log("Selected Artifact Data:", artifact);
 
     let currentArtifact = artifact;
 
     // Fallback: If content is missing, fetch it now via API
     if (!artifact.content && artifact.url) {
-      console.log("Artifact content missing, fetching now from API:", artifact.url);
       setIsGenerating(true);
       try {
         const response = await fetch(artifact.url);
@@ -128,7 +118,6 @@ const App: React.FC = () => {
             const decodedString = atob(base64Content);
             const content = JSON.parse(decodedString);
             currentArtifact = { ...artifact, content };
-            console.log("Successfully fetched content on-demand via API:", content);
           }
         } else {
           console.error("Failed to fetch content via API (on-demand):", response.statusText);
@@ -164,6 +153,7 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to generate simulation:", error);
+      alert("Failed to generate clinical simulation. Please try again.");
     } finally {
       setIsGenerating(false);
     }
