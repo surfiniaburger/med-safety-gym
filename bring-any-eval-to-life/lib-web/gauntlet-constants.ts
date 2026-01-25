@@ -4,3 +4,4 @@ export const WARMUP_PURPLE_RADIUS = 0.4;
 export const WARMUP_GREEN_RADIUS = 0.3;
 export const WARMUP_GREEN_ORBIT_RADIUS = 3;
 export const WARMUP_GREEN_ORBIT_SPEED = 3;
+export const WARMUP_ENTRY_LERP_FACTOR = 0.02;

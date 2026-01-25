@@ -27,7 +27,8 @@ import {
     WARMUP_PURPLE_RADIUS, 
     WARMUP_GREEN_RADIUS, 
     WARMUP_GREEN_ORBIT_RADIUS,
-    WARMUP_GREEN_ORBIT_SPEED 
+    WARMUP_GREEN_ORBIT_SPEED,
+    WARMUP_ENTRY_LERP_FACTOR
 } from '../../lib-web/gauntlet-constants';
 
 enum GauntletState {
@@ -103,7 +104,7 @@ const WarmupAgents = ({ state }: { state: GauntletState }) => {
         if (state === GauntletState.WARMUP_ENTRY) {
             // Purple model agent enters from far left
             if (purpleRef.current) {
-                purpleRef.current.position.x = THREE.MathUtils.lerp(purpleRef.current.position.x, WARMUP_TARGET_X, 0.02);
+                purpleRef.current.position.x = THREE.MathUtils.lerp(purpleRef.current.position.x, WARMUP_TARGET_X, WARMUP_ENTRY_LERP_FACTOR);
                 purpleRef.current.position.y = Math.sin(time * 2) * 0.5;
             }
         }
