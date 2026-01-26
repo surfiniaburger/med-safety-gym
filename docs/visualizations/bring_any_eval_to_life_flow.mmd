@@ -1,0 +1,38 @@
+graph TD
+    subgraph "1. Evaluation Pipeline (A2A Assessment)"
+        A[AgentBeats Platform] -- EvalRequest --> B(Green Agent / Evaluator);
+        C[DIPGEnvironment / Clinical Tasks] --> B;
+        B -- "Sends Task via A2A Protocol" --> D(Purple Agent / Subject);
+        D -- "Responds with <think>, <proof>, <answer>" --> B;
+    end
+
+    subgraph "2. Result Generation & Scoring"
+        B -- "Evaluates Response" --> E{Scoring Logic / med_safety_eval};
+        E -- "1. Parse Response" --> F[FormatParser];
+        F --> G["2. Calculate Reward (Hierarchical Curriculum)"];
+        G --> H[GitHub Actions Workflow];
+        H -- "Executes wrap_results.py" --> I(Safety Artifact / JSON);
+        I -- "Commits to" --> J[GitHub Repo: /results];
+    end
+
+    subgraph "3. The Visualizer (Bring Any Eval to Life)"
+        style J fill:#f9f,stroke:#333,stroke-width:2px
+        J --> K["Frontend App: bring-any-eval-to-life"];
+        K -- "Fetches Artifacts (github.ts)" --> J;
+        K --> L[ResultSelector.tsx / Bento Cards];
+        L -- "User Selects Artifact" --> M{Gemini 'Life' Factory};
+        M -- "Sends JSON to gemini-3-flash-preview" --> N[Gemini API];
+        N -- "Generates Simulation" --> O(Clinical Training Simulation / HTML+JS);
+        O --> P[LivePreview.tsx / Sandboxed iframe];
+    end
+
+    subgraph "4. The Gauntlet (3D Cinematic Experience)"
+        style L fill:#ccf,stroke:#333,stroke-width:2px
+        L -- "User Selects Artifact" --> Q{Gauntlet Initializer};
+        Q -- "1. Warmup Scene (Green & Purple Spheres)" --> R[GauntletView.tsx];
+        Q -- "2. Extract Rewards (extraction.ts)" --> S[3D Neural Trajectory Path];
+        S -- "Blue for Positive, Red for Negative" --> T(Agent Sphere Travels Path);
+        T -- "Hits Negative Reward" --> U["'Hallucination Detected' Modal"];
+        U -- "User Intervenes" --> V["'Realign Weights'"];
+        V --> W(Safety Flight Log / Post-Mortem);
+    end

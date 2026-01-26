@@ -494,3 +494,16 @@ The Med Safety Gym features a leaderboard to track the safety performance of var
 *   **`med_safety_gym/evaluation_service.py`**: Manages batch evaluation and metrics.
 *   **`med_safety_gym/client.py`**: HTTP client for interacting with the server.
 *   **`tests/`**: Comprehensive test suite.
+
+## ✨ Bring Any Evaluation to Life
+
+The "Bring Any Evaluation to Life" system transforms static safety evaluation results into interactive, cinematic experiences. It provides a powerful way to visualize, understand, and interact with an AI model's performance during high-stakes medical safety assessments.
+
+The end-to-end flow is as follows:
+
+1.  **Agent-to-Agent Assessment:** A Green (Evaluator) Agent assesses a Purple (Subject) Agent against a set of clinical tasks.
+2.  **Result Generation:** The system scores the subject's performance, calculating rewards based on correctness, grounding, and the ability to abstain from hallucination. The final output is a JSON "Safety Artifact".
+3.  **Interactive Visualization:** A frontend application fetches these artifacts and uses Gemini to generate a playable, sandboxed clinical simulation based on the data.
+4.  **3D Cinematic Gauntlet:** The system also visualizes the model's reward trajectory as a 3D "Neural Path," allowing for a post-mortem analysis of its decision-making process.
+
+![Bring Any Evaluation to Life Flow](docs/visualizations/bring_any_eval_to_life_flow.png)
