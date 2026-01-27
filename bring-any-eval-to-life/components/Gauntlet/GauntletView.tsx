@@ -30,6 +30,7 @@ import {
     WARMUP_GREEN_ORBIT_SPEED,
     WARMUP_ENTRY_LERP_FACTOR
 } from '../../lib-web/gauntlet-constants';
+import { StepMetrics } from '../../lib-web/extraction';
 
 enum GauntletState {
     WARMUP_ENTRY,
@@ -93,7 +94,7 @@ const Starfield = () => {
     );
 };
 
-const WarmupAgents = ({ state }: { state: GauntletState }) => {
+const WarmupAgents = ({ state, isFailedNode }: { state: GauntletState, isFailedNode: boolean }) => {
     const purpleRef = useRef<THREE.Group>(null);
     const greenRef = useRef<THREE.Group>(null);
     const pulseRef = useRef<THREE.PointLight>(null);
@@ -126,9 +127,9 @@ const WarmupAgents = ({ state }: { state: GauntletState }) => {
 
     return (
         <group>
-            {/* Purple Model Agent - Only visible during early warmup */}
-            {(state === GauntletState.WARMUP_ENTRY || state === GauntletState.EVALUATION_PULSE) && (
-                <group ref={purpleRef} position={[WARMUP_START_X, 0, 0]}>
+            {/* Purple Model Agent - Visible during warmup OR when frozen due to failure */}
+            {(state === GauntletState.WARMUP_ENTRY || state === GauntletState.EVALUATION_PULSE || state === GauntletState.TRANSITION || (state === GauntletState.TRAJECTORY_ACTIVE && isFailedNode)) && (
+                <group ref={purpleRef} position={[WARMUP_TARGET_X, 0, 0]}>
                     <Sphere args={[WARMUP_PURPLE_RADIUS, 32, 32]}>
                         <meshStandardMaterial color="#845ef7" emissive="#845ef7" emissiveIntensity={2} />
                     </Sphere>
@@ -189,6 +190,7 @@ const BarrierNode = ({ position, active }: { position: THREE.Vector3, active: bo
 
 interface GauntletViewProps {
     rewards: number[];
+    metrics?: StepMetrics[];
     activeStepIndex: number;
     solvedNodes: number[];
     onIntervene: (index: number) => void;
@@ -334,7 +336,6 @@ const NeuralPathway = ({ points, rewards, solvedNodes }: { points: THREE.Vector3
                                 position={[0, 1.2, 0]}
                                 fontSize={0.4}
                                 color="#fa5252"
-                                font="monospace"
                             >
                                 DANGER
                             </Text>
@@ -355,6 +356,7 @@ const NeuralPathway = ({ points, rewards, solvedNodes }: { points: THREE.Vector3
 
 export const GauntletView: React.FC<GauntletViewProps> = ({
     rewards,
+    metrics,
     activeStepIndex,
     solvedNodes,
     onIntervene,
@@ -395,11 +397,31 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
     }, [rewards]);
 
     const currentReward = rewards[activeStepIndex];
+    const currentMetrics = metrics?.[activeStepIndex];
     const isFailedNode = currentReward < 0 && !solvedNodes.includes(activeStepIndex);
     const [isInternalPaused, setIsInternalPaused] = useState(isFailedNode);
     const [isManualPaused, setIsManualPaused] = useState(false);
     const [showRestored, setShowRestored] = useState(false);
     const [gameState, setGameState] = useState<GauntletState>(GauntletState.WARMUP_ENTRY);
+    const showFailureUI = isFailedNode && gameState === GauntletState.TRAJECTORY_ACTIVE;
+
+    const failureTitle = useMemo(() => {
+        if (!currentMetrics) return "Hallucination Detected";
+        if (currentMetrics.hallucination) return "Hallucination Detected";
+        if (currentMetrics.format_error) return "Format Error Detected";
+        if (currentMetrics.inconsistency) return "Inconsistency Detected";
+        if (currentMetrics.refusal) return "Refusal Detected";
+        return "Safety Violation Detected";
+    }, [currentMetrics]);
+
+    const failureDescription = useMemo(() => {
+        if (!currentMetrics) return "The neural pathway has encountered a critical alignment error. Manual intervention is required to realign weights and restore safety protocols.";
+        if (currentMetrics.hallucination) return "The model has generated medically inaccurate or fabricated information. This poses a critical risk to patient safety.";
+        if (currentMetrics.format_error) return "The model failed to adhere to the required output format, potentially disrupting downstream clinical systems.";
+        if (currentMetrics.inconsistency) return "The model's reasoning is inconsistent with its final recommendation, indicating a failure in logical processing.";
+        if (currentMetrics.refusal) return "The model has refused to provide a necessary medical recommendation, which may delay critical care.";
+        return "The neural pathway has encountered a critical alignment error. Manual intervention is required to realign weights and restore safety protocols.";
+    }, [currentMetrics]);
 
     // Phase 11: Warmup Sequence Timing
     useEffect(() => {
@@ -455,7 +477,7 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
                     <PerspectiveCamera makeDefault position={[-20, 10, 20]} />
                     <Starfield />
 
-                    <WarmupAgents state={gameState} />
+                    <WarmupAgents state={gameState} isFailedNode={isFailedNode} />
 
                     <OrbitControls
                         enablePan={true}
@@ -519,12 +541,13 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
             </div>
 
             {/* Glitch Overlay */}
-            {isFailedNode && <GlitchOverlay />}
+            {showFailureUI && <GlitchOverlay />}
 
             {/* Intervention Required Modal */}
             <AnimatePresence>
-                {isFailedNode && (
+                {showFailureUI && (
                     <motion.div
+                        key="intervention-modal"
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -539,9 +562,9 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
                                 </div>
 
                                 <span className="text-rose-500 font-mono text-[10px] font-bold uppercase tracking-[0.3em] mb-4">Autopilot Failure: Node {activeStepIndex}</span>
-                                <h2 className="text-3xl font-black text-white mb-3">Hallucination Detected</h2>
+                                <h2 className="text-3xl font-black text-white mb-3">{failureTitle}</h2>
                                 <p className="text-zinc-400 text-sm mb-10 leading-relaxed font-medium">
-                                    The neural pathway has encountered a critical alignment error. Manual intervention is required to realign weights and restore safety protocols.
+                                    {failureDescription}
                                 </p>
 
                                 <button

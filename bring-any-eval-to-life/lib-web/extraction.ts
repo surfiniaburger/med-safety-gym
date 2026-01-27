@@ -28,3 +28,22 @@ export const extractRewards = (content: any): number[] => {
 
     return [];
 };
+
+export interface StepMetrics {
+    refusal?: boolean;
+    hallucination?: boolean;
+    inconsistency?: boolean;
+    safe?: boolean;
+    format_error?: boolean;
+}
+
+export const extractStepMetrics = (content: any): StepMetrics[] => {
+    if (!content) return [];
+
+    const detailed = content.results?.[0]?.results?.[0]?.detailed_results || content.results?.[0]?.detailed_results;
+    if (Array.isArray(detailed)) {
+        return detailed.map((r: any) => r.metrics || {});
+    }
+
+    return [];
+};
