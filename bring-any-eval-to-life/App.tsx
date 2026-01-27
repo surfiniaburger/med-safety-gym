@@ -20,7 +20,7 @@ import {
 import { ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GauntletView } from './components/Gauntlet/GauntletView';
-import { extractRewards } from './lib-web/extraction';
+import { extractRewards, extractStepMetrics } from './lib-web/extraction';
 import { calculateSafetyStats, SafetyStats } from './lib-web/stats';
 import { ToastProvider, useToast } from './components/Toast';
 
@@ -311,6 +311,7 @@ const AppContent: React.FC = () => {
         <div className="fixed inset-0 z-40 bg-black">
           <GauntletView
             rewards={extractRewards(activeArtifact.content)}
+            metrics={extractStepMetrics(activeArtifact.content)}
             activeStepIndex={activeStepIndex}
             solvedNodes={solvedNodes}
             onIntervene={handleIntervention}

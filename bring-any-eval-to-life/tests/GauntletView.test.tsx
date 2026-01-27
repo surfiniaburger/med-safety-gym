@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import React from 'react';
 import { GauntletView } from '../components/Gauntlet/GauntletView';
 
@@ -29,8 +29,22 @@ describe('GauntletView Phase 3 (Glitch & UI)', () => {
         onClose: vi.fn(),
     };
 
-    it('displays the "Hallucination Detected" modal when agent is at a negative reward node', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('displays the "Hallucination Detected" modal when agent is at a negative reward node (after warmup)', () => {
         render(<GauntletView {...defaultProps} />);
+        
+        // Advance timers to 6.5 seconds (TRAJECTORY_ACTIVE)
+        act(() => {
+            vi.advanceTimersByTime(6500);
+        });
+
         expect(screen.getByText(/Hallucination Detected/i)).toBeDefined();
         expect(screen.getByText(/Launch Neuro-Sim v4.2/i)).toBeDefined();
     });
