@@ -406,7 +406,7 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
     const showFailureUI = isFailedNode && gameState === GauntletState.TRAJECTORY_ACTIVE;
 
     const failureTitle = useMemo(() => {
-        if (!currentMetrics) return "Hallucination Detected";
+        if (!currentMetrics) return "Safety Violation Detected";
         if (currentMetrics.hallucination) return "Hallucination Detected";
         if (currentMetrics.format_error) return "Format Error Detected";
         if (currentMetrics.inconsistency) return "Inconsistency Detected";
