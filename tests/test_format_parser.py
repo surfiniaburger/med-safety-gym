@@ -198,6 +198,32 @@ Some text.
         # Should NOT pick Fake 1 or Fake 2
         assert result.final == "Real Answer"
         assert result.proof == "Real Proof"
+
+    def test_parse_xml_fallback_no_answer_tag(self, parser):
+        """Tests fallback: extracting text after last closed tag when <answer> is missing."""
+        response_text = """
+<think>Thinking...</think>
+<proof>Some proof</proof>
+This is the final answer that should be captured by fallback.
+"""
+        result = parser.parse(response_text, ResponseFormat.XML)
+        assert result.final == "This is the final answer that should be captured by fallback."
+        assert result.proof == "Some proof"
+
+    def test_parse_xml_malformed_tags(self, parser):
+        """Tests resilience to malformed or unclosed tags."""
+        response_text = """
+<think>Incomplete thought...
+<proof>Unclosed proof
+<answer>But a valid answer</answer>
+"""
+        result = parser.parse(response_text, ResponseFormat.XML)
+        # Should capture the valid answer
+        assert result.final == "But a valid answer"
+        # Since <think> and <proof> are not closed, regex won't match them (expecting </tag>)
+        # This is expected behavior for our regex-based parser.
+        assert result.analysis == ""
+        assert result.proof == ""
     
     # ==================================================================================
     # YAML Format Tests
@@ -330,20 +356,20 @@ test
     # ==================================================================================
     
     def test_parse_empty_response(self, parser):
-        """Test parsing empty response"""
-        with pytest.raises(ValueError, match="cannot be empty"):
-            parser.parse("", ResponseFormat.AUTO)
-    
+        """Test parsing empty response returns error message instead of raising."""
+        result = parser.parse("", ResponseFormat.AUTO)
+        assert "FORMAT_ERROR" in result.final
+
     def test_parse_whitespace_only(self, parser):
-        """Test parsing whitespace-only response"""
-        with pytest.raises(ValueError, match="cannot be empty"):
-            parser.parse("   \n\t   ", ResponseFormat.AUTO)
+        """Test parsing whitespace-only response returns error message."""
+        result = parser.parse("   \n\t   ", ResponseFormat.AUTO)
+        assert "FORMAT_ERROR" in result.final
     
     def test_parse_unsupported_format(self, parser):
-        """Test parsing with unsupported format type"""
-        # This would require modifying the enum, so we test the error path
-        with pytest.raises(ValueError):
-            parser.parse('{"test": "data"}', "invalid_format")
+        """Test parsing with unsupported format type falls back to XML."""
+        # Instead of ValueError, it should now fallback to XML parsing
+        result = parser.parse('<answer>Fallback Work</answer>', "invalid_format")
+        assert result.final == "Fallback Work"
     
     def test_dipg_response_validation(self):
         """Test DIPGResponse validation"""

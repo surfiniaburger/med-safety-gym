@@ -24,9 +24,15 @@ class FormatParser:
             "final": ["answer", "final", "conclusion", "result"],
         }
         
+        # Shared template for XML-like tag extraction
+        self.tag_pattern_template = r"<(?:{tags})(?:\s+[^>]*)?>(.*?)</(?:{tags})>"
+        
         # Pre-compile regex for efficiency, supporting multiple tag names for flexibility.
         self.tag_patterns = {
-            key: re.compile(rf"<(?:{'|'.join(aliases)})>(.*?)</(?:{'|'.join(aliases)})>", re.DOTALL | re.IGNORECASE)
+            key: re.compile(
+                self.tag_pattern_template.format(tags='|'.join(re.escape(a) for a in aliases)),
+                re.DOTALL | re.IGNORECASE
+            )
             for key, aliases in self.tag_aliases.items()
         }
         
@@ -44,7 +50,7 @@ class FormatParser:
                 all_other_aliases.extend(aliases)
         
         self.fallback_closing_tag_pattern = re.compile(
-            rf"</(?:{'|'.join(all_other_aliases)})>", 
+            rf"</(?:{'|'.join(re.escape(a) for a in all_other_aliases)})>", 
             re.IGNORECASE
         )
 
