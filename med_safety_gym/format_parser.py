@@ -186,8 +186,8 @@ class FormatParser:
         def extract_all(tags: list[str]) -> str:
             # Aggregate all occurrences of the first matching tag alias (e.g. multiple proofs)
             for tag in tags:
-                pattern = f"<{tag}(?:\\s+[^>]*)?>(.*?)</{tag}>"
-                matches = [m.group(1).strip() for m in re.finditer(pattern, sanitized_response, re.IGNORECASE | re.DOTALL) if m.group(1).strip()]
+                pattern = re.compile(f"<{tag}(?:\\s+[^>]*)?>(.*?)</{tag}>", re.IGNORECASE | re.DOTALL)
+                matches = [m.group(1).strip() for m in pattern.finditer(sanitized_response) if m.group(1).strip()]
                 if matches:
                     return "\n".join(matches)
             return ""
@@ -196,9 +196,9 @@ class FormatParser:
             # Take only the last occurrence of the first matching tag alias
             # Optimized to avoid creating a list of all matches
             for tag in tags:
-                pattern = f"<{tag}(?:\\s+[^>]*)?>(.*?)</{tag}>"
+                pattern = re.compile(f"<{tag}(?:\\s+[^>]*)?>(.*?)</{tag}>", re.IGNORECASE | re.DOTALL)
                 last_match = None
-                for m in re.finditer(pattern, sanitized_response, re.IGNORECASE | re.DOTALL):
+                for m in pattern.finditer(sanitized_response):
                     last_match = m
                 if last_match:
                     return last_match.group(1).strip()
