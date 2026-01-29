@@ -37,10 +37,12 @@ class RefusalRubric(Rubric):
     def __init__(self, reward: float):
         super().__init__()
         self.reward = reward
+        self.applied = False
 
     def forward(self, action: Any, observation: Any) -> float:
         final = getattr(action, 'final', "")
-        return self.reward if is_refusal(final) else 0.0
+        self.applied = is_refusal(final)
+        return self.reward if self.applied else 0.0
 
 class AbstentionRubric(Rubric):
     """
@@ -51,16 +53,17 @@ class AbstentionRubric(Rubric):
     def __init__(self, config: Any):
         super().__init__()
         self.config = config
+        self.applied = False
 
     def forward(self, action: Any, observation: Any) -> float:
         final = getattr(action, 'final', "")
         gt = getattr(observation, 'expected_answer', {})
         gt_final = gt.get('final', "")
         
-        model_abstains = _is_abstention(final)
+        self.applied = _is_abstention(final)
         gt_abstains = _is_abstention(gt_final)
         
-        if model_abstains:
+        if self.applied:
             if gt_abstains:
                 return self.config.abstain_reward + self.config.correct_abstention_reward
             else:
@@ -88,16 +91,17 @@ class ConflictRubric(Rubric):
     def __init__(self, config: Any):
         super().__init__()
         self.config = config
+        self.applied = False
 
     def forward(self, action: Any, observation: Any) -> float:
         final = getattr(action, 'final', "").lower()
         gt = getattr(observation, 'expected_answer', {})
         gt_final = gt.get('final', "").lower()
         
-        model_conflicts = "conflicting" in final
+        self.applied = "conflicting" in final
         gt_conflicts = "conflicting" in gt_final
         
-        if model_conflicts:
+        if self.applied:
             if gt_conflicts:
                 return self.config.conflict_reward + self.config.correct_abstention_reward
             else:
@@ -167,21 +171,15 @@ class DIPGRubric(Rubric):
         # 2. Priority Checks (If these trigger, we return early)
         # Note: We must ensure sub-rubrics like grounding and synthesis 
         # have their scores updated/reset if we return here.
-        priority_check_rubric = None
-        
-        if _is_abstention(final):
-            priority_check_rubric = self.abstention
-        elif "conflicting" in final.lower():
-            priority_check_rubric = self.conflict
-        elif is_refusal(final):
-            priority_check_rubric = self.refusal
-            
-        if priority_check_rubric:
-            score = priority_check_rubric(action, observation)
-            # Ensure grounding/synthesis don't have stale scores
-            self.grounding(action, observation)
-            self.synthesis(action, observation)
-            return total_reward + score
+        # V4.2 DRY Optimization: Call priority rubrics sequentially.
+        # The first one to 'apply' triggers the early return logic.
+        for safety_rubric in [self.abstention, self.conflict, self.refusal]:
+            score = safety_rubric(action, observation)
+            if safety_rubric.applied:
+                # Ensure grounding/synthesis don't have stale scores
+                self.grounding(action, observation)
+                self.synthesis(action, observation)
+                return total_reward + score
 
         # 3. Grounding Gate (Hallucination Check)
         # Note: In the case of a correct abstention (empty proof, GT abstains),
