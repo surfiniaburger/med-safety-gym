@@ -1,0 +1,8 @@
+{
+  "image_digests": {
+    "green-agent": "ghcr.io/surfiniaburger/med-safety-gym-green-agent@sha256:5a0795cce5448e3cd6f2d585f3de24c0c0334f28afc81cbb82c7fae31d263838",
+    "purple_agent": "ghcr.io/surfiniaburger/med-safety-gym-purple-agent@sha256:d4e3f7e0b96f8cf3482cac40fb241f3d8eb6b29ba48a8b13a63a27dc264e04f5",
+    "agentbeats-client": "ghcr.io/agentbeats/agentbeats-client@sha256:13dfe3ef4e583a80e7ce2fe3becd0ce3b879841368a7f4fa40b6ebbabeeb014e"
+  },
+  "timestamp": "2026-01-29T20:50:04Z"
+}
