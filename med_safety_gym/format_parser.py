@@ -40,6 +40,33 @@ class FormatParser:
     """
     
     def __init__(self):
+        # XML Tag Config (Synced with med_safety_eval)
+        self.tag_aliases = {
+            "analysis": ["think", "analysis", "reasoning", "thought"],
+            "proof": ["proof", "trace", "evidence", "quote"],
+            "final": ["answer", "final", "conclusion", "result", "final_answer"],
+        }
+        self.tag_pattern_template = r"<(?:{tags})(?:\s+[^>]*)?>(.*?)</(?:{tags})>"
+        
+        # Pre-compile patterns
+        self.tag_patterns = {
+            key: re.compile(
+                self.tag_pattern_template.format(tags='|'.join(re.escape(a) for a in aliases)),
+                re.DOTALL | re.IGNORECASE
+            )
+            for key, aliases in self.tag_aliases.items()
+        }
+        
+        # Fallback for missing answer tag
+        all_other_aliases = []
+        for key, aliases in self.tag_aliases.items():
+            if key != "final":
+                all_other_aliases.extend(aliases)
+        self.fallback_closing_tag_pattern = re.compile(
+            rf"</(?:{'|'.join(re.escape(a) for a in all_other_aliases)})>", 
+            re.IGNORECASE
+        )
+
         # Regex pattern for custom tag format
         self.custom_tag_pattern = re.compile(
             r'<\|channel\|>(\w+)<\|message\|>(.*?)<\|end\|>',
@@ -53,35 +80,27 @@ class FormatParser:
     ) -> DIPGResponse:
         """
         Parse response in any supported format.
-        
-        Args:
-            response: The LLM-generated response string
-            format_type: Expected format (or AUTO to detect)
-            
-        Returns:
-            Normalized DIPGResponse object
-            
-        Raises:
-            ValueError: If format is invalid or required fields missing
         """
         if not response or not response.strip():
-            raise ValueError("Response cannot be empty")
-        
+            return DIPGResponse(
+                final="FORMAT_ERROR: Empty response",
+                original_response=response,
+            )
+
         if format_type == ResponseFormat.AUTO:
             format_type = self._detect_format(response)
+
+        if format_type == ResponseFormat.CUSTOM_TAGS:
+            return self._parse_custom_tags(response, original_response=response)
+        elif format_type == ResponseFormat.XML:
+            return self._parse_xml(response, original_response=response)
+        elif format_type == ResponseFormat.JSON:
+            return self._parse_json(response, original_response=response)
+        elif format_type == ResponseFormat.YAML:
+            return self._parse_yaml(response, original_response=response)
         
-        
-        parser_map = {
-            ResponseFormat.JSON: self._parse_json,
-            ResponseFormat.XML: self._parse_xml,
-            ResponseFormat.YAML: self._parse_yaml,
-            ResponseFormat.CUSTOM_TAGS: self._parse_custom_tags,
-        }
-        parser_func = parser_map.get(format_type)
-        if parser_func:
-            return parser_func(response, original_response=response)
-        else:
-            raise ValueError(f"Unsupported format: {format_type}")
+        # Fallback to XML
+        return self._parse_xml(response, original_response=response)
     
     def _detect_format(self, response: str) -> ResponseFormat:
         """Auto-detect the format of the response"""
@@ -168,46 +187,35 @@ class FormatParser:
         cleaned_response = response.strip()
 
         # 1. Extract analysis (thought) from the original text (first match)
-        analysis_tags = ['analysis', 'think', 'reasoning', 'thought']
-        analysis_text = ""
-        sanitized_response = cleaned_response
+        analysis_prog = self.tag_patterns["analysis"]
+        analysis_match = analysis_prog.search(cleaned_response)
+        analysis_text = analysis_match.group(1).strip() if analysis_match else ""
         
         # 2. Strip ALL thinking blocks from the text to prevent nesting issues
-        # Pre-compile with flags for efficiency and to avoid count/flags argument pitfalls
-        analysis_pattern = f"<(?:{'|'.join(analysis_tags)})(?:\\s+[^>]*)?>(.*?)</(?:{'|'.join(analysis_tags)})>"
-        analysis_prog = re.compile(analysis_pattern, re.IGNORECASE | re.DOTALL)
         sanitized_response = analysis_prog.sub("", cleaned_response)
+
+        # 3. Extract other tags from the sanitized text
+        # Synced strategy: Aggregate proofs, take last final
+        proof_prog = self.tag_patterns["proof"]
+        proof_matches = [m.group(1).strip() for m in proof_prog.finditer(sanitized_response) if m.group(1).strip()]
+        proof_text = "\n".join(proof_matches) if proof_matches else ""
         
-        # Find first match for analysis_text (persona/thought)
-        first_analysis_match = analysis_prog.search(cleaned_response)
-        if first_analysis_match:
-            analysis_text = first_analysis_match.group(1).strip()
+        final_prog = self.tag_patterns["final"]
+        last_final_match = None
+        for m in final_prog.finditer(sanitized_response):
+            last_final_match = m
+        final_text = last_final_match.group(1).strip() if last_final_match else ""
 
-        def extract_all(tags: list[str]) -> str:
-            # Aggregate all occurrences of the first matching tag alias (e.g. multiple proofs)
-            for tag in tags:
-                pattern = re.compile(f"<{tag}(?:\\s+[^>]*)?>(.*?)</{tag}>", re.IGNORECASE | re.DOTALL)
-                matches = [m.group(1).strip() for m in pattern.finditer(sanitized_response) if m.group(1).strip()]
-                if matches:
-                    return "\n".join(matches)
-            return ""
+        # ROBUSTNESS FALLBACK: If <answer> is missing, look for text after the last closed tag
+        if not final_text:
+            last_tag_match = list(self.fallback_closing_tag_pattern.finditer(sanitized_response))
+            if last_tag_match:
+                last_pos = last_tag_match[-1].end()
+                remaining_text = sanitized_response[last_pos:].strip()
+                # Only use if it's substantial (not just whitespace or random chars)
+                if remaining_text and len(remaining_text) > 2:
+                    final_text = remaining_text
 
-        def extract_last(tags: list[str]) -> str:
-            # Take only the last occurrence of the first matching tag alias
-            # Optimized to avoid creating a list of all matches
-            for tag in tags:
-                pattern = re.compile(f"<{tag}(?:\\s+[^>]*)?>(.*?)</{tag}>", re.IGNORECASE | re.DOTALL)
-                last_match = None
-                for m in pattern.finditer(sanitized_response):
-                    last_match = m
-                if last_match:
-                    return last_match.group(1).strip()
-            return ""
-
-        # Map aliases and extract from sanitized text
-        proof_text = extract_all(['proof', 'evidence', 'quote'])
-        final_text = extract_last(['final', 'answer', 'conclusion', 'final_answer'])
-        
         data = {
             "analysis": analysis_text,
             "proof": proof_text,
