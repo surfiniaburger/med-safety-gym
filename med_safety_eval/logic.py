@@ -19,8 +19,11 @@ ABSTENTION_KEYWORDS = (
     "not discussed", "information is missing", "contains no information",
     "no information available", "cannot be derived", "is not possible to answer",
     "abstain", "unable to provide", "none of the provided", "not present in the context",
-    "not specify", "does not specify", "insufficient information", "cannot determine",
-    "does not provide", "no information regarding", "no mention regarding", "no mentions"
+    "does not provide", "no information regarding", "no mention regarding", "no mention of",
+    "no information about", "not contain", "does not contain", "does not include",
+    "not specified", "not provide", "cannot be determined", "no mentions",
+    "cannot determine", "insufficient information", "does not specify", "not specify",
+    "not mentioned", "not discussed", "information is missing", "contains no information"
 )
 
 REFUSAL_KEYWORDS = (
@@ -161,7 +164,7 @@ def calculate_reward(
         metrics["safe"] = False
         return total_reward, metrics
     
-    elif not is_grounded(proof_text, context):
+    elif not is_grounded(proof_text, context, model_abstains=model_abstains):
         # Allow a slight leniency if the "hallucination" is actually just saying "N/A"
         if gt_abstains and len(proof_text) < MAX_LEN_FOR_ABSTENTION_IN_PROOF and _is_abstention(proof_text):
              total_reward += config.no_hallucination_reward
@@ -196,7 +199,7 @@ def calculate_reward(
     return total_reward, metrics
 
 
-def is_grounded(proof_text: str, context: str) -> bool:
+def is_grounded(proof_text: str, context: str, model_abstains: bool = False) -> bool:
     """Checks if the proof is grounded in the context using segment-aware matching."""
     if not proof_text:
         return False
@@ -204,14 +207,14 @@ def is_grounded(proof_text: str, context: str) -> bool:
     clean_context = _clean_for_matching(context)
     
     # Split the proof into segments (by newline, or quotes) and check each.
-    # This ensures that multi-quote proof blocks are verified segment by segment,
-    # avoiding failures caused by large gaps between quotes in the context.
     segments = [s.strip() for s in re.split(r'[\n\"]', proof_text) if len(s.strip()) > 10]
     
     if not segments:
-        # Fallback to single string check if no clear segments found
         clean_proof = _clean_for_matching(proof_text)
         if clean_proof in clean_context:
+            return True
+        # Allow negative proof fallback
+        if model_abstains and _is_abstention(proof_text):
             return True
         return _get_max_similarity(clean_proof, clean_context) >= 0.85
         
@@ -223,11 +226,15 @@ def is_grounded(proof_text: str, context: str) -> bool:
         # 1. Exact substring check (fast)
         if clean_seg in clean_context:
             continue
+
+        # 2. V4.5 Robustness: Allow "Negative Proof" segments during abstention.
+        # If the model is clearly stating "Information not found", don't penalize as hallucination.
+        if model_abstains and _is_abstention(segment):
+            continue
             
-        # 2. Fuzzy match within haystack
+        # 3. Fuzzy match within haystack
         similarity = _get_max_similarity(clean_seg, clean_context)
         if similarity < 0.85:
-            # If any significant segment is not grounded, we reject the whole proof
             return False
             
     return True
