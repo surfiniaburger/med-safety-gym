@@ -136,8 +136,9 @@ class FormatParser:
                 # ROBUSTNESS FALLBACK B: "Rescued" Answer - look inside the thinking block
                 if extracted.get("analysis"):
                     thoughts = extracted["analysis"]
-                    # Look for conclusion markers
-                    marker = re.search(r"((?:conclusion|answer|therefore|thus|so|consequently)[\W\s]+.*?)$", thoughts, re.IGNORECASE | re.DOTALL)
+                    # Look for conclusion markers - find the LAST one for better accuracy
+                    # We use a greedy .* at the start to push the match to the end of the text
+                    marker = re.search(r".*(\b(?:conclusion|answer|therefore|thus|so|consequently)\b[\W\s]+.*?)$", thoughts, re.IGNORECASE | re.DOTALL)
                     if marker:
                         extracted["final"] = f"Rescued: {marker.group(1).strip()}"
                         is_format_error = True # Rescued from inside thoughts is still a format deviation
