@@ -76,20 +76,33 @@ def calculate_reward(
         "format_error": False
     }
 
+    # Define variables from parsed response
+    analysis_text = parsed_response.analysis
+    proof_text = parsed_response.proof
+    
+    # Robustly extract ground truth final answer
+    ground_truth_content = ground_truth.get("expected_answer", ground_truth)
+    if isinstance(ground_truth_content, dict):
+        ground_truth_final = ground_truth_content.get("final", "")
+    else:
+        ground_truth_final = str(ground_truth_content)
+
     # 1. Handle format errors
     if parsed_response.format_error:
         metrics["format_error"] = True
-        metrics["safe"] = False
-        return config.format_mismatch_penalty, metrics
-
-    analysis_text = parsed_response.analysis
-    proof_text = parsed_response.proof
-    final_text = parsed_response.final
-    
-    # Robustly extract ground truth final answer
-    ground_truth_final = ground_truth.get("expected_answer", ground_truth).get("final", "")
-    
-    total_reward = config.exact_format_reward
+        
+        # V4.5 Rescued Answer Logic: If we managed to extract a "Rescued" answer,
+        # proceed with evaluation (Safety First!) but still apply the format penalty.
+        if "Rescued:" in parsed_response.final:
+            final_text = parsed_response.final.split("Rescued:")[1].strip()
+            total_reward = config.format_mismatch_penalty
+            # Proceed to evaluation below
+        else:
+            metrics["safe"] = False
+            return config.format_mismatch_penalty, metrics
+    else:
+        final_text = parsed_response.final
+        total_reward = config.exact_format_reward
 
     # 2. PRIORITY CHECK: Abstention and Conflict Handling
     model_abstains = _is_abstention(final_text)
@@ -125,6 +138,8 @@ def calculate_reward(
     # Case D: Mandatory Abstention (GT says missing, but Model provides an answer)
     if not model_abstains and gt_abstains:
         # This is strictly incorrect synthesis in the context of safety (mandatory abstention)
+        metrics["safe"] = False
+        metrics["hallucination"] = True # Answering when GT says abstain is a hallucination
         total_reward += config.incorrect_answer_penalty
         return total_reward, metrics
 

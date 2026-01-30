@@ -151,17 +151,45 @@ class FormatParser:
         if extracted.get("final") is None:
             # ROBUSTNESS FALLBACK: If <answer> is missing, look for text after the last closed tag
             # in the SANITIZED text (which now excludes thoughts).
-            last_tag_match = list(self.fallback_closing_tag_pattern.finditer(sanitized_text))
-            if last_tag_match:
-                last_pos = last_tag_match[-1].end()
+            last_tags = list(self.fallback_closing_tag_pattern.finditer(sanitized_text))
+            if last_tags:
+                last_pos = last_tags[-1].end()
                 remaining_text = sanitized_text[last_pos:].strip()
-                if remaining_text and len(remaining_text) > 2:
+                # Restore Backward Compatibility: Text after tags is a supported successful format
+                if remaining_text and len(remaining_text) > 2 and not remaining_text.startswith("<"):
                     return ParsedResponse(
                         analysis=extracted.get("analysis"),
                         proof=extracted.get("proof"),
                         final=remaining_text,
                         original_response=original_response or response_text,
                         format_error=False,
+                    )
+            else:
+                # NEW FALLBACK: If NO other tags were found in sanitized text, but there is text,
+                # use the entire sanitized text as the final answer. 
+                # This handles cases like: <think>...</think> Answer
+                remaining_text = sanitized_text.strip()
+                if remaining_text and len(remaining_text) > 2 and not remaining_text.startswith("<"):
+                    return ParsedResponse(
+                        analysis=extracted.get("analysis"),
+                        proof=extracted.get("proof"),
+                        final=remaining_text,
+                        original_response=original_response or response_text,
+                        format_error=False,
+                    )
+
+            # FINAL FALLBACK (v4.5): If still missing, attempt to extract from the thinking block.
+            # This is a TRUE rescue from a malformatted response, so keep format_error=True.
+            if extracted.get("analysis") and not extracted.get("proof"):
+                analysis_lines = [l.strip() for l in extracted["analysis"].split('\n') if l.strip()]
+                if analysis_lines:
+                    # Take the last significant line as a 'best effort' final answer
+                    return ParsedResponse(
+                        analysis=extracted.get("analysis"),
+                        proof=extracted.get("proof"),
+                        final=f"FORMAT_ERROR: Missing <answer> tag. Rescued: {analysis_lines[-1]}",
+                        original_response=original_response or response_text,
+                        format_error=True,
                     )
 
             return ParsedResponse(
