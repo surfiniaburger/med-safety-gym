@@ -26,7 +26,7 @@ class FormatParser:
         
         # Shared template for XML-like tag extraction
         # V4.6: Support both <tag> and [tag].
-        self.tag_pattern_template = r"(?:<|\[)(?:{tags})(?:\s+[^\]]*)?(?:>|\])(.*?)(?:<|\[)/(?:{tags})(?:>|\])"
+        self.tag_pattern_template = r"(?:<|\[)(?:{tags})(?:\s+[^\]>]*?)?(?:>|\])(.*?)(?:<|\[)/(?:{tags})(?:>|\])"
         
         # Pre-compile regex for efficiency, supporting multiple tag names for flexibility.
         self.tag_patterns = {
@@ -41,7 +41,7 @@ class FormatParser:
         # V4.6: Stop at the next tag or end of string
         all_aliases = [a for aliases in self.tag_aliases.values() for a in aliases]
         self.unclosed_analysis_pattern = re.compile(
-            r"(?:<|\[)(?:{tags})(?:\s+[^\]]*)?(?:>|\])(.*?)(?=(?:<|\[)(?:{all_tags})|$)".format(
+            r"(?:<|\[)(?:{tags})(?:\s+[^\]>]*?)?(?:>|\])(.*?)(?=(?:<|\[)(?:{all_tags})|$)".format(
                 tags='|'.join(re.escape(a) for a in self.tag_aliases["analysis"]),
                 all_tags='|'.join(re.escape(a) for a in all_aliases)
             ),
@@ -181,7 +181,7 @@ class FormatParser:
             # Remove all well-formed tag blocks that we recognize (both <tag> and [tag])
             for key_alias, aliases in self.tag_aliases.items():
                 p = re.compile(
-                    r"(?:<|\[)(?:{tags})(?:\s+[^\]]*)?(?:>|\])(.*?)(?:<|\[)/(?:{tags})(?:>|\])".format(tags='|'.join(re.escape(a) for a in aliases)),
+                    r"(?:<|\[)(?:{tags})(?:\s+[^\]>]*?)?(?:>|\])(.*?)(?:<|\[)/(?:{tags})(?:>|\])".format(tags='|'.join(re.escape(a) for a in aliases)),
                     re.DOTALL | re.IGNORECASE
                 )
                 text_without_blocks = p.sub("", text_without_blocks)
