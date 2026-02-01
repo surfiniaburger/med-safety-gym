@@ -7,8 +7,7 @@
  * Main coordinator agent that orchestrates the 5-agent workflow.
  */
 
-import { LlmAgent } from '@google/adk';
-import { AgentTool } from '@google/adk/tools/agent_tool';
+import { LlmAgent, AgentTool } from '@google/adk';
 import { GLOBAL_INSTRUCTION, EVAL_COORDINATOR_PROMPT } from './prompts';
 import { config } from './config';
 import {

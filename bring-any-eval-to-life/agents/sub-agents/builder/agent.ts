@@ -7,8 +7,7 @@
  * Builder Agent: Generates HTML/TypeScript code with sandbox preview tool.
  */
 
-import { LlmAgent } from '@google/adk';
-import { googleSearch } from '@google/adk/tools';
+import { LlmAgent, GoogleSearchTool } from '@google/adk';
 import { BUILDER_AGENT_PROMPT } from '../../prompts';
 import { config } from '../../config';
 import { sandboxPreviewTool } from '../../tools/sandboxPreview/function_tools';
@@ -20,7 +19,7 @@ export const builderAgent = new LlmAgent({
     instruction: BUILDER_AGENT_PROMPT,
     outputKey: 'code_output',
     tools: [
-        googleSearch,
+        new GoogleSearchTool(),
         sandboxPreviewTool, // Allow builder to preview generated code
     ],
 });

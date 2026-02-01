@@ -7,8 +7,7 @@
  * Concept Agent: Brainstorms evaluation ideas and defines success criteria.
  */
 
-import { LlmAgent } from '@google/adk';
-import { googleSearch } from '@google/adk/tools';
+import { LlmAgent, GoogleSearchTool } from '@google/adk';
 import { CONCEPT_AGENT_PROMPT } from '../../prompts';
 import { config } from '../../config';
 
@@ -18,5 +17,5 @@ export const conceptAgent = new LlmAgent({
     description: 'Brainstorms evaluation concepts and defines success criteria',
     instruction: CONCEPT_AGENT_PROMPT,
     outputKey: 'concept_output',
-    tools: [googleSearch],
+    tools: [new GoogleSearchTool()],
 });

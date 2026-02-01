@@ -17,12 +17,15 @@ import {
   ExclamationCircleIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/solid';
-import { ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GauntletView } from './components/Gauntlet/GauntletView';
 import { extractRewards, extractStepMetrics } from './lib-web/extraction';
 import { calculateSafetyStats, SafetyStats } from './lib-web/stats';
 import { ToastProvider, useToast } from './components/Toast';
+import { AgentChat } from './components/AgentChat';
+import { FeedbackModal } from './components/FeedbackModal';
+import { SandboxPreview } from './components/SandboxPreview';
 
 const AppContent: React.FC = () => {
   const [activeCreation, setActiveCreation] = useState<Creation | null>(null);
@@ -35,6 +38,7 @@ const AppContent: React.FC = () => {
   const [isMissionComplete, setIsMissionComplete] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const [appMode, setAppMode] = useState<'simulator' | 'eval-builder'>('simulator');
 
 
   // Fetch evaluation artifacts
@@ -257,37 +261,83 @@ const AppContent: React.FC = () => {
         `}
       >
         <div className="pt-12 md:pt-20 pb-8 flex flex-col items-center">
+          {/* Mode Toggle */}
+          <div className="mb-6 flex gap-2 p-1 bg-white/5 border border-white/10 rounded-full">
+            <button
+              onClick={() => setAppMode('simulator')}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${appMode === 'simulator'
+                ? 'bg-white text-black'
+                : 'text-zinc-400 hover:text-white'
+                }`}
+            >
+              Clinical Simulator
+            </button>
+            <button
+              onClick={() => setAppMode('eval-builder')}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${appMode === 'eval-builder'
+                ? 'bg-sky-500 text-white'
+                : 'text-zinc-400 hover:text-white'
+                }`}
+            >
+              AI Eval Builder
+            </button>
+          </div>
           <Hero />
         </div>
 
-        {/* Artifacts Selection Engine */}
-        <section className="py-12">
-          <div className="flex flex-col items-center mb-12 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-bold uppercase tracking-widest mb-4">
-              <ArrowUpTrayIcon className="w-3 h-3" /> Artifact Selection Engine
-            </div>
-            <h2 className="text-4xl font-black text-white mb-4">Select an Evaluation Result</h2>
-            <p className="text-zinc-500 max-w-lg">
-              Choose a clinical safety artifact to transform it into a high-stakes medical training simulation.
-            </p>
-          </div>
+        {/* Conditional Content Based on Mode */}
+        {appMode === 'simulator' ? (
+          <>
+            {/* Artifacts Selection Engine */}
+            <section className="py-12">
+              <div className="flex flex-col items-center mb-12 text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-bold uppercase tracking-widest mb-4">
+                  <ArrowUpTrayIcon className="w-3 h-3" /> Artifact Selection Engine
+                </div>
+                <h2 className="text-4xl font-black text-white mb-4">Select an Evaluation Result</h2>
+                <p className="text-zinc-500 max-w-lg">
+                  Choose a clinical safety artifact to transform it into a high-stakes medical training simulation.
+                </p>
+              </div>
 
-          <ResultSelector
-            artifacts={artifacts}
-            onSelect={handleSelectArtifact}
-            isLoading={isLoadingArtifacts}
-          />
-        </section>
+              <ResultSelector
+                artifacts={artifacts}
+                onSelect={handleSelectArtifact}
+                isLoading={isLoadingArtifacts}
+              />
+            </section>
 
-        {/* Custom Input (Secondary) */}
-        <section className="py-20 border-t border-white/5">
-          <div className="flex flex-col items-center mb-8 text-center text-sm text-zinc-600 font-mono">
-            OR DEFINE A CUSTOM RESEARCH SCENARIO
-          </div>
-          <div className="w-full flex justify-center">
-            <InputArea onGenerate={handleGenerate} isGenerating={isGenerating} disabled={isFocused} />
-          </div>
-        </section>
+            {/* Custom Input (Secondary) */}
+            <section className="py-20 border-t border-white/5">
+              <div className="flex flex-col items-center mb-8 text-center text-sm text-zinc-600 font-mono">
+                OR DEFINE A CUSTOM RESEARCH SCENARIO
+              </div>
+              <div className="w-full flex justify-center">
+                <InputArea onGenerate={handleGenerate} isGenerating={isGenerating} disabled={isFocused} />
+              </div>
+            </section>
+          </>
+        ) : (
+          <>
+            {/* AI Eval Builder Mode */}
+            <section className="py-12">
+              <div className="flex flex-col items-center mb-12 text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-bold uppercase tracking-widest mb-4">
+                  <SparklesIcon className="w-3 h-3" /> Multi-Agent Builder
+                </div>
+                <h2 className="text-4xl font-black text-white mb-4">Create Your Evaluation</h2>
+                <p className="text-zinc-500 max-w-lg">
+                  Collaborate with our AI team to design and build custom evaluation UIs in minutes.
+                </p>
+              </div>
+
+              {/* Agent Chat Interface */}
+              <div className="max-w-5xl mx-auto border border-white/10 rounded-3xl overflow-hidden" style={{ height: '600px' }}>
+                <AgentChat />
+              </div>
+            </section>
+          </>
+        )}
 
         {/* History Section & Footer */}
         <div className="flex-shrink-0 pb-12 w-full mt-auto flex flex-col items-center gap-12">

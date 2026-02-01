@@ -3,13 +3,11 @@
  * Licensed under the Apache License, Version 2.0
  */
 
-import { env } from 'node:process';
-
 /**
  * Helper function to read environment variables.
  */
 function getEnv(key: string, defaultValue: string): string {
-    return env[key] || defaultValue;
+    return process.env[key] || defaultValue;
 }
 
 export class AgentModel {

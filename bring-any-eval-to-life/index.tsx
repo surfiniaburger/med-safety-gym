@@ -5,6 +5,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import './process-polyfill'; // Import process polyfill first
 import App from './App';
 import './index.css';
 

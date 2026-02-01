@@ -7,8 +7,7 @@
  * Designer Agent: Designs UI structure and component layout.
  */
 
-import { LlmAgent } from '@google/adk';
-import { googleSearch } from '@google/adk/tools';
+import { LlmAgent, GoogleSearchTool } from '@google/adk';
 import { DESIGNER_AGENT_PROMPT } from '../../prompts';
 import { config } from '../../config';
 
@@ -18,5 +17,5 @@ export const designerAgent = new LlmAgent({
     description: 'Designs UI structure, components, and interaction patterns',
     instruction: DESIGNER_AGENT_PROMPT,
     outputKey: 'design_output',
-    tools: [googleSearch],
+    tools: [new GoogleSearchTool()],
 });

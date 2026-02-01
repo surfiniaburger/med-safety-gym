@@ -10,14 +10,14 @@
 
 import type {
     BasePolicyEngine,
-    PolicyOutcome,
-    ToolCallPolicyContext,
-    PolicyCheckResult
+    PolicyCheckResult,
+    ToolCallPolicyContext
 } from '@google/adk';
+import { PolicyOutcome } from '@google/adk';
 
 export class EvalBuilderPolicyEngine implements BasePolicyEngine {
     async evaluate(context: ToolCallPolicyContext): Promise<PolicyCheckResult> {
-        const toolName = context.functionCall.name;
+        const toolName = context.tool.name;
 
         // Require user confirmation for all sub-agent invocations
         const requiresConfirmation = [
@@ -30,14 +30,14 @@ export class EvalBuilderPolicyEngine implements BasePolicyEngine {
 
         if (requiresConfirmation) {
             return {
-                outcome: 'CONFIRM' as PolicyOutcome,
+                outcome: PolicyOutcome.CONFIRM,
                 reason: `User feedback needed after ${toolName} completes`,
             };
         }
 
         // Auto-approve utility tools (google_search, preview_in_sandbox)
         return {
-            outcome: 'ALLOW' as PolicyOutcome,
+            outcome: PolicyOutcome.ALLOW,
             reason: 'Utility tool, no user approval needed',
         };
     }

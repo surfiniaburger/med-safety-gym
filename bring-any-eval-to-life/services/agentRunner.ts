@@ -8,8 +8,7 @@
  * Integrates ADK InMemoryRunner with SecurityPlugin for human-in-the-loop.
  */
 
-import { InMemoryRunner } from '@google/adk';
-import { SecurityPlugin } from '@google/adk/plugins';
+import { InMemoryRunner, SecurityPlugin } from '@google/adk';
 import { rootAgent } from '../agents/coordinator';
 import { EvalBuilderPolicyEngine } from './policyEngine';
 import { config } from '../agents/config';
@@ -29,17 +28,28 @@ export class AgentRunnerService {
         });
     }
 
-    async *runAgent(userMessage: string, sessionId: string) {
+    async *runAgent(userMessage: string, sessionId: string, confirmationResponse?: { approved: boolean; feedback?: string }) {
+        // runAsync handles session creation internally
         for await (const event of this.runner.runAsync({
             sessionId,
-            userMessage,
+            userId: 'user',
+            newMessage: confirmationResponse 
+                ? { 
+                    role: 'user', 
+                    parts: [{ 
+                        text: confirmationResponse.approved 
+                            ? 'Approved. Please proceed.' 
+                            : `I have some feedback: ${confirmationResponse.feedback}` 
+                    }] 
+                }
+                : { role: 'user', parts: [{ text: userMessage }] },
         })) {
             yield event;
         }
     }
 
-    // Helper to get session state
-    getSession(sessionId: string) {
-        return this.runner.getSession(sessionId);
+    // Helper to access session service
+    getSessionService() {
+        return this.runner.sessionService;
     }
 }
