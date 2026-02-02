@@ -80,8 +80,11 @@ const Starfield = () => {
     const starsRef = useRef<THREE.Points>(null);
     useFrame((state) => {
         if (starsRef.current) {
-            starsRef.current.rotation.y += 0.0001;
-            starsRef.current.rotation.x += 0.00005;
+            starsRef.current.rotation.y += 0.0002;
+            starsRef.current.rotation.x += 0.0001;
+            // Subtle parallax based on camera position
+            starsRef.current.position.x = state.camera.position.x * 0.05;
+            starsRef.current.position.y = state.camera.position.y * 0.05;
         }
     });
 
@@ -292,11 +295,11 @@ const PathAgent = ({
     );
 };
 
-const CinematicCamera = ({ enabled, type, profile }: { enabled: boolean, type: PathGeometryType, profile: CameraProfile }) => {
+const CinematicCamera = ({ enabled, type, profile, points }: { enabled: boolean, type: PathGeometryType, profile: CameraProfile, points: THREE.Vector3[] }) => {
     const { agentPosition, agentProgress } = useGauntlet();
 
     useFrame((state) => {
-        if (enabled && agentPosition) {
+        if (enabled && agentPosition && points.length > 0) {
             const offset = getCameraOffset(agentProgress, type, profile);
             const targetPos = agentPosition.clone().add(offset);
 
@@ -305,8 +308,9 @@ const CinematicCamera = ({ enabled, type, profile }: { enabled: boolean, type: P
             
             if (profile === 'first-person') {
                 // Look ahead along the path
-                const lookAhead = agentPosition.clone().add(new THREE.Vector3(1, 0, 0));
-                state.camera.lookAt(lookAhead);
+                const nextIndex = Math.min(Math.floor(agentProgress) + 1, points.length - 1);
+                const lookTarget = points[nextIndex];
+                state.camera.lookAt(lookTarget);
             } else {
                 state.camera.lookAt(agentPosition);
             }
@@ -557,7 +561,7 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
             {/* Cinematic Camera Control */}
             <Canvas shadows dpr={[1, 2]}>
                 <GauntletContext.Provider value={contextValue}>
-                    <CinematicCamera enabled={cameraMode === 'cinematic'} type={pathType} profile={cameraProfile} />
+                    <CinematicCamera enabled={cameraMode === 'cinematic'} type={pathType} profile={cameraProfile} points={points} />
                     <PerspectiveCamera makeDefault position={[-20, 10, 20]} />
                     <Starfield />
 
