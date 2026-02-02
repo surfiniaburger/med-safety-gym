@@ -213,19 +213,23 @@ interface GauntletViewProps {
     accentColor?: string;
 }
 
+interface PathAgentProps {
+    points: THREE.Vector3[];
+    rewards: number[];
+    currentIndex: number;
+    isPaused: boolean;
+    simSpeed: number;
+    onProgress: (index: number) => void;
+}
+
 const PathAgent = ({
     points,
     rewards,
     currentIndex,
     isPaused,
+    simSpeed,
     onProgress
-}: {
-    points: THREE.Vector3[],
-    rewards: number[],
-    currentIndex: number,
-    isPaused: boolean,
-    onProgress: (index: number) => void
-}) => {
+}: PathAgentProps) => {
     const meshRef = useRef<THREE.Mesh>(null);
     const [progress, setProgress] = useState(currentIndex);
 
@@ -242,8 +246,8 @@ const PathAgent = ({
 
         if (progress < points.length - 1) {
             const currentReward = rewards[Math.floor(progress)] || 0;
-            const speedMultiplier = calculateCinematicSpeed(currentReward);
-            const nextProgress = progress + delta * speedMultiplier;
+            const baseSpeed = calculateCinematicSpeed(currentReward);
+            const nextProgress = progress + delta * baseSpeed * simSpeed;
             setProgress(nextProgress);
 
             const floorIndex = Math.floor(nextProgress);
@@ -467,6 +471,7 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
     const [cameraProfile, setCameraProfile] = useState<CameraProfile>('follow');
     const [pathType, setPathType] = useState<PathGeometryType>(initialPathType);
     const [neuralIntensity, setNeuralIntensity] = useState(0.5);
+    const [simSpeed, setSimSpeed] = useState(1.0);
 
     // Keyboard Navigation Support
     useEffect(() => {
@@ -598,6 +603,7 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
                                 rewards={rewards}
                                 currentIndex={activeStepIndex}
                                 isPaused={isInternalPaused}
+                                simSpeed={simSpeed}
                                 onProgress={onActiveStepChange}
                             />
 
@@ -785,6 +791,23 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
                                 step="0.01"
                                 value={neuralIntensity}
                                 onChange={(e) => setNeuralIntensity(parseFloat(e.target.value))}
+                                className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-1 px-1 mt-1">
+                            <div className="flex justify-between items-center">
+                                <label htmlFor="speed-slider" className="text-[8px] text-zinc-500 uppercase font-bold tracking-widest">Sim Speed</label>
+                                <span className="text-[8px] font-mono text-blue-400 font-bold">{simSpeed.toFixed(1)}x</span>
+                            </div>
+                            <input
+                                id="speed-slider"
+                                type="range"
+                                min="0.1"
+                                max="3.0"
+                                step="0.1"
+                                value={simSpeed}
+                                onChange={(e) => setSimSpeed(parseFloat(e.target.value))}
                                 className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
                             />
                         </div>
