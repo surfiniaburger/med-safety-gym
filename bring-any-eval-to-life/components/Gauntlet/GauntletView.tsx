@@ -65,16 +65,33 @@ const useGauntlet = () => {
 };
 
 const Starfield = () => {
-    const starCount = 3000;
-    const positions = useMemo(() => {
+    const starCount = 4000;
+    const [positions, colors, sizes] = useMemo(() => {
         const coords = new Float32Array(starCount * 3);
-        const range = 300; // Increased range for centering flexibility
+        const cols = new Float32Array(starCount * 3);
+        const szs = new Float32Array(starCount);
+        const range = 400;
+        
+        const colorOptions = [
+            new THREE.Color("#ffffff"),
+            new THREE.Color("#4dabf7"), // Blue
+            new THREE.Color("#845ef7"), // Purple
+            new THREE.Color("#fab005"), // Gold
+        ];
+
         for (let i = 0; i < starCount; i++) {
             coords[i * 3] = (Math.random() - 0.5) * range;
             coords[i * 3 + 1] = (Math.random() - 0.5) * range;
             coords[i * 3 + 2] = (Math.random() - 0.5) * range;
+
+            const color = colorOptions[Math.floor(Math.random() * (Math.random() > 0.9 ? colorOptions.length : 1))];
+            cols[i * 3] = color.r;
+            cols[i * 3 + 1] = color.g;
+            cols[i * 3 + 2] = color.b;
+
+            szs[i] = Math.random() * 0.15 + 0.05;
         }
-        return coords;
+        return [coords, cols, szs];
     }, []);
 
     const starsRef = useRef<THREE.Points>(null);
@@ -97,13 +114,31 @@ const Starfield = () => {
                     array={positions}
                     itemSize={3}
                 />
+                <bufferAttribute
+                    attach="attributes-color"
+                    count={starCount}
+                    array={colors}
+                    itemSize={3}
+                />
             </bufferGeometry>
-            <pointsMaterial size={0.12} color="#ffffff" transparent opacity={0.4} sizeAttenuation />
+            <pointsMaterial 
+                size={0.15} 
+                vertexColors 
+                transparent 
+                opacity={0.6} 
+                sizeAttenuation 
+                blending={THREE.AdditiveBlending}
+            />
         </points>
     );
 };
 
-const WarmupAgents = ({ state, isFailedNode }: { state: GauntletState, isFailedNode: boolean }) => {
+interface WarmupAgentsProps {
+    state: GauntletState;
+    isFailedNode: boolean;
+}
+
+const WarmupAgents = ({ state, isFailedNode }: WarmupAgentsProps) => {
     const purpleRef = useRef<THREE.Group>(null);
     const greenRef = useRef<THREE.Group>(null);
     const pulseRef = useRef<THREE.PointLight>(null);
@@ -179,26 +214,43 @@ const GlitchOverlay = () => (
     </div>
 );
 
-const BarrierNode = ({ position, active, intensity }: { position: THREE.Vector3, active: boolean, intensity: number }) => (
-    <group position={position}>
-        {active && (
-            <Float speed={8 * intensity} rotationIntensity={0.5 * intensity} floatIntensity={0.5 * intensity}>
-                <mesh rotation={[0, 0, 0]}>
-                    <planeGeometry args={[5, 5]} />
-                    <MeshWobbleMaterial
-                        color="#fa5252"
-                        speed={4 * intensity}
-                        factor={0.8 * intensity}
-                        transparent
-                        opacity={0.3}
-                        side={THREE.DoubleSide}
-                    />
-                </mesh>
-                <pointLight distance={8} intensity={15 * intensity} color="#fa5252" />
-            </Float>
-        )}
-    </group>
-);
+interface BarrierNodeProps {
+    position: THREE.Vector3;
+    active: boolean;
+    intensity: number;
+}
+
+const BarrierNode = ({ position, active, intensity }: BarrierNodeProps) => {
+    const lightRef = useRef<THREE.PointLight>(null);
+
+    useFrame((state) => {
+        if (active && lightRef.current) {
+            const time = state.clock.getElapsedTime();
+            lightRef.current.intensity = (Math.sin(time * 10) * 5 + 15) * intensity;
+        }
+    });
+
+    return (
+        <group position={position}>
+            {active && (
+                <Float speed={8 * intensity} rotationIntensity={0.5 * intensity} floatIntensity={0.5 * intensity}>
+                    <mesh rotation={[0, 0, 0]}>
+                        <planeGeometry args={[5, 5]} />
+                        <MeshWobbleMaterial
+                            color="#fa5252"
+                            speed={4 * intensity}
+                            factor={0.8 * intensity}
+                            transparent
+                            opacity={0.3}
+                            side={THREE.DoubleSide}
+                        />
+                    </mesh>
+                    <pointLight ref={lightRef} distance={8} intensity={15 * intensity} color="#fa5252" />
+                </Float>
+            )}
+        </group>
+    );
+};
 
 interface GauntletViewProps {
     rewards: number[];
@@ -331,7 +383,16 @@ const CinematicCamera = ({ enabled, type, profile, points }: CinematicCameraProp
     return null;
 };
 
-const NeuralPathway = ({ points, rewards, solvedNodes, pathType, intensity, color }: { points: THREE.Vector3[], rewards: number[], solvedNodes: number[], pathType: PathGeometryType, intensity: number, color: string }) => {
+interface NeuralPathwayProps {
+    points: THREE.Vector3[];
+    rewards: number[];
+    solvedNodes: number[];
+    pathType: PathGeometryType;
+    intensity: number;
+    color: string;
+}
+
+const NeuralPathway = ({ points, rewards, solvedNodes, pathType, intensity, color }: NeuralPathwayProps) => {
     const { agentProgress } = useGauntlet();
     const curve = useMemo(() => new THREE.CatmullRomCurve3(points), [points]);
 
