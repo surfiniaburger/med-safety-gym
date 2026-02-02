@@ -22,12 +22,7 @@ import {
     ShieldCheckIcon,
     PauseIcon,
     PlayIcon as PlayIconOutline,
-    ChevronUpIcon,
-    ChevronDownIcon,
-    ChevronLeftIcon,
-    ChevronRightIcon,
     MagnifyingGlassPlusIcon,
-    MagnifyingGlassMinusIcon,
     ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { calculateCinematicSpeed, getCameraOffset, CameraProfile } from '../../lib-web/camera';
@@ -759,55 +754,20 @@ export const GauntletView: React.FC<GauntletViewProps> = ({
             {gameState === GauntletState.TRAJECTORY_ACTIVE && (
                 <div className="absolute right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-4">
                     <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-4 flex flex-col gap-2 shadow-2xl">
-                        <div className="flex justify-center">
+                        {cameraMode === 'cinematic' ? (
                             <button
                                 onClick={() => setCameraMode('manual')}
-                                aria-label="Move Up"
-                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all text-[10px] font-bold uppercase tracking-widest"
                             >
-                                <ChevronUpIcon className="w-5 h-5" />
+                                <MagnifyingGlassPlusIcon className="w-4 h-4" />
+                                Free Camera
                             </button>
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setCameraMode('manual')}
-                                aria-label="Move Left"
-                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                            >
-                                <ChevronLeftIcon className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => setCameraMode('manual')}
-                                aria-label="Move Down"
-                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                            >
-                                <ChevronDownIcon className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => setCameraMode('manual')}
-                                aria-label="Move Right"
-                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                            >
-                                <ChevronRightIcon className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="h-px bg-white/10 my-1" />
-                        <div className="flex gap-2 justify-center">
-                            <button
-                                onClick={() => setCameraMode('manual')}
-                                aria-label="Zoom In"
-                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                            >
-                                <MagnifyingGlassPlusIcon className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => setCameraMode('manual')}
-                                aria-label="Zoom Out"
-                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                            >
-                                <MagnifyingGlassMinusIcon className="w-5 h-5" />
-                            </button>
-                        </div>
+                        ) : (
+                            <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">
+                                <ArrowPathIcon className="w-4 h-4" />
+                                Manual Mode
+                            </div>
+                        )}
 
                         <div className="h-px bg-white/10 my-1" />
                         
