@@ -299,7 +299,14 @@ const PathAgent = ({
     );
 };
 
-const CinematicCamera = ({ enabled, type, profile, points }: { enabled: boolean, type: PathGeometryType, profile: CameraProfile, points: THREE.Vector3[] }) => {
+interface CinematicCameraProps {
+    enabled: boolean;
+    type: PathGeometryType;
+    profile: CameraProfile;
+    points: THREE.Vector3[];
+}
+
+const CinematicCamera = ({ enabled, type, profile, points }: CinematicCameraProps) => {
     const { agentPosition, agentProgress } = useGauntlet();
 
     useFrame((state) => {
