@@ -8,11 +8,11 @@ This script starts all three components and runs integration tests:
 
 Usage:
     # Start servers (in separate terminals):
-    uv run python server/fastmcp_server.py
-    uv run uvicorn server.dipg_agent:a2a_app --host localhost --port 10000
+    uv run python -m med_safety_gym.fastmcp_server
+    uv run uvicorn med_safety_gym.dipg_agent:a2a_app --host localhost --port 10000
     
     # Run tests:
-    uv run python server/test_a2a_client.py
+    uv run python -m med_safety_gym.test_a2a_client
 """
 
 import subprocess
@@ -71,7 +71,7 @@ def main():
     try:
         # Start FastMCP server
         fastmcp_process = start_server(
-            ["uv", "run", "python", "server/fastmcp_server.py"],
+            ["uv", "run", "python", "-m", "med_safety_gym.fastmcp_server"],
             "FastMCP Server",
             "http://localhost:8081/mcp",
             wait_time=30,
@@ -80,7 +80,7 @@ def main():
         
         # Start A2A agent server
         a2a_process = start_server(
-            ["uv", "run", "uvicorn", "server.dipg_agent:a2a_app", "--host", "localhost", "--port", "10000"],
+            ["uv", "run", "uvicorn", "med_safety_gym.dipg_agent:a2a_app", "--host", "localhost", "--port", "10000"],
             "A2A Agent Server",
             "http://localhost:10000/.well-known/agent-card.json",
             wait_time=30,
@@ -90,7 +90,7 @@ def main():
         # Run test client
         print("\n🧪 Running A2A test client...")
         result = subprocess.run(
-            ["uv", "run", "python", "server/test_a2a_client.py"]
+            ["uv", "run", "python", "-m", "med_safety_gym.test_a2a_client"]
         )
         
         if result.returncode == 0:

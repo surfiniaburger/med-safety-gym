@@ -9,7 +9,7 @@ Usage:
     docker-compose up --build
 
     # 2. Run verification (in another terminal)
-    uv run python server/verify_docker.py
+    uv run python -m med_safety_gym.verify_docker
 """
 
 import asyncio
