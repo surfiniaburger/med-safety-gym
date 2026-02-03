@@ -234,8 +234,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ creation, isLoading, i
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="text-zinc-100 font-mono text-lg tracking-tight">Constructing Environment</h3>
-                <p className="text-zinc-500 text-sm mt-2">Interpreting visual data...</p>
+                <h3 className="text-zinc-100 font-mono text-lg tracking-tight">Priming Neuro-Sim</h3>
+                <p className="text-zinc-500 text-sm mt-2">Constructing clinical training environment...</p>
               </div>
 
               {/* Progress Bar */}
@@ -245,10 +245,10 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ creation, isLoading, i
 
               {/* Terminal Steps */}
               <div className="border border-zinc-800 bg-black/50 rounded-lg p-4 space-y-3 font-mono text-sm">
-                <LoadingStep text="Analyzing visual inputs" active={loadingStep === 0} completed={loadingStep > 0} />
-                <LoadingStep text="Identifying UI patterns" active={loadingStep === 1} completed={loadingStep > 1} />
-                <LoadingStep text="Generating functional logic" active={loadingStep === 2} completed={loadingStep > 2} />
-                <LoadingStep text="Compiling preview" active={loadingStep === 3} completed={loadingStep > 3} />
+                <LoadingStep text="Analyzing safety artifacts" active={loadingStep === 0} completed={loadingStep > 0} />
+                <LoadingStep text="Synthesizing clinical scenario" active={loadingStep === 1} completed={loadingStep > 1} />
+                <LoadingStep text="Generating interactive simulation" active={loadingStep === 2} completed={loadingStep > 2} />
+                <LoadingStep text="Compiling medical environment" active={loadingStep === 3} completed={loadingStep > 3} />
               </div>
             </div>
           </div>

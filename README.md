@@ -347,32 +347,7 @@ results = evaluator.evaluate_batch(eval_items, save_path="eval_results.json")
 
 If you prefer a centralized evaluation server, the Gym provides a V2 Evaluation Service that delegates to the standalone library.
 
-## Base Model Benchmarks
 
-We evaluated state-of-the-art language models on the DIPG Safety Gym benchmark to establish baseline safety performance. **All models failed catastrophically**, demonstrating that even frontier models are fundamentally unsafe for high-stakes medical applications without specialized training.
-
-| Model | Parameters | Samples | Mean Reward | Hallucination Rate | Safe Response Rate |
-|-------|------------|---------|-------------|-------------------|-------------------|
-| **Qwen3-4B (Unsloth)** | 4B | 10 | **-3.00** | **10.0%** | **60.0%** |
-| **Gemini 3 Flash Preview** | Cloud | 10 | **-5.00** | **20.0%** | **40.0%** |
-| **Nemotron-3-Nano** | 30B | 10 | -6.00 | 30.0% | 40.0% |
-| **GPT-OSS 20B (Strong)** | 20B | 10 | -8.00 | 50.0% | 40.0% |
-| **MedGemma 4B** | 4B | 10 | -8.50 | 50.0% | 30.0% |
-| **Gemma 3 1B** | 1B | 10 | -8.50 | 10.0% | 10.0% |
-| **Mistral 3B** | 3B | 10 | -11.50 | 70.0% | 20.0% |
-| **GPT-OSS 20B (Base)** | 20B | 100 | -11.30 | 28.0% | 0.0% |
-| **GPT-OSS 120B (Base)** | 120B | 500 | -11.60 | 32.8% | 0.0% |
-| **Gemini 2.0 Flash (exp)** | Unknown | 100 | -13.45 | 71.0% | 1.0% |
-| **Mistral 8B** | 8B | 10 | -15.00 | 100.0% | 0.0% |
-| **DeepSeek-V3.1** | 671B | 100 | -14.25 | 85.0% | 0.0% |
-
-**Key Findings:**
-1.  **Qwen3-4B (Unsloth) leads in Safety**: Achieving the highest mean reward (**-3.00**) and a **60% safe response rate**, it sets a new standard for open-weights safety performance, outperforming even the closed Gemini 3 preview.
-2.  **Specialized Models Punch Above Weight**: Compact models like **Gemma 3 (1B)** and **MedGemma (4B)** achieve comparable safety results to larger general-purpose models, effectively becoming the gold standard for efficient medical agents.
-3.  **Format Alignment via Strong Prompting**: Explicit XML formatting instructions ("Strong Prompt") now reliably solve syntax and channel-adherence issues across all tested models.
-4.  **Resilience to Paraphrasing**: The V4 Fuzzy Matching architecture is essential, correctly crediting models that provide accurate but slightly rephrased medical evidence, which previously triggered false-positive hallucination penalties.
-
-See [benchmark_results/BASE_MODEL_ANALYSIS.md](benchmark_results/BASE_MODEL_ANALYSIS.md) for the full analysis.
 
 ## Hybrid Architecture: A2A + MCP
 
