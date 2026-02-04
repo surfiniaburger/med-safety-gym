@@ -101,7 +101,7 @@ class Rubric(abc.ABC):
         """Returns a dictionary containing the state of the rubric and its children."""
         return {name: child.state_dict() for name, child in self._children.items()}
 
-    def capture_snapshot(self) -> Dict[str, Any]:
+    def capture_scores(self) -> Dict[str, Any]:
         """
         Captures the current scores of all rubrics in the hierarchy.
         Returns a dictionary mapping dot-separated paths to scores.

@@ -3,6 +3,9 @@ import json
 import time
 from med_safety_eval.rubric import Rubric
 from med_safety_eval.schemas import NeuralSnapshot
+import threading
+import requests
+
 
 
 @runtime_checkable
@@ -53,9 +56,7 @@ class WebsocketSink:
         self.url = f"{base_url}/gauntlet/stream/{session_id}"
 
     def emit(self, snapshot: NeuralSnapshot) -> None:
-        import threading
-        import requests
-        
+
         def _post_in_thread():
             try:
                 # We use a simple POST to the broadcast endpoint
