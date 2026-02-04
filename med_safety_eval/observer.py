@@ -53,14 +53,21 @@ class WebsocketSink:
         self.url = f"{base_url}/gauntlet/stream/{session_id}"
 
     def emit(self, snapshot: NeuralSnapshot) -> None:
-        try:
-            import requests
-            # We use a simple POST to the broadcast endpoint
-            # model_dump(mode='json') ensures serialization of inner types
-            requests.post(self.url, json=snapshot.model_dump(mode='json'), timeout=1.0)
-        except Exception as e:
-            # Sinks should be non-blocking and fail-silent in training
-            pass
+        import threading
+        import requests
+        
+        def _post_in_thread():
+            try:
+                # We use a simple POST to the broadcast endpoint
+                # model_dump(mode='json') ensures serialization of inner types
+                requests.post(self.url, json=snapshot.model_dump(mode='json'), timeout=1.0)
+            except Exception as e:
+                # Sinks should be non-blocking and fail-silent in training
+                pass
+        
+        # Run the blocking request in a separate thread to avoid blocking the event loop.
+        thread = threading.Thread(target=_post_in_thread, daemon=True)
+        thread.start()
 
 
 class RubricObserver:
