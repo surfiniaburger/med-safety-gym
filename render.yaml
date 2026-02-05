@@ -4,7 +4,7 @@ services:
     name: med-safety-hub
     env: docker
     dockerContext: .
-    dockerfile: Dockerfile.hub
+    dockerfilePath: Dockerfile.hub
     plan: free
     region: oregon
     healthCheckPath: /
