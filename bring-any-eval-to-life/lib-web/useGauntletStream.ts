@@ -19,9 +19,14 @@ export const useGauntletStream = (sessionId: string | null) => {
 
         // Determine WS URL (handle dev vs prod)
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host; // e.g. localhost:3000 or localhost:8000
-        // If running on port 3000 (Vite), we might need to proxy or point to 8000
-        const wsHost = import.meta.env.VITE_WS_HOST || host.replace('3000', '8000');
+        const host = window.location.host;
+        const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+
+        // Remote Render Hub is our standard broadcast relay
+        // Source from env or default to the production instance
+        const RENDER_HUB = import.meta.env.VITE_RENDER_HUB || "med-safety-hub.onrender.com";
+
+        const wsHost = import.meta.env.VITE_WS_HOST || (isLocal ? host.replace('3000', '8000') : RENDER_HUB);
         const wsUrl = `${protocol}//${wsHost}/ws/gauntlet/${sessionId}`;
 
         const ws = new WebSocket(wsUrl);
