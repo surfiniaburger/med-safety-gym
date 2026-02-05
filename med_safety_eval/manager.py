@@ -72,18 +72,28 @@ class LocalEvaluationManager:
         ```
     """
     
-    def __init__(self, reward_config: RewardConfig, sinks: Optional[List['DataSink']] = None, session_id: Optional[str] = None):
+    def __init__(
+        self, 
+        reward_config: Optional[RewardConfig] = None, 
+        sinks: Optional[List['DataSink']] = None, 
+        session_id: Optional[str] = None,
+        rubric: Optional['Rubric'] = None
+    ):
         """
         Initialize the local evaluation manager.
         
         Args:
-            reward_config: Configuration for reward and penalty values
+            reward_config: Configuration for reward and penalty values (optional if rubric provided)
             sinks: Optional list of DataSinks for observability streaming
             session_id: Optional session ID for streaming
+            rubric: Optional custom Rubric instance (overrides reward_config)
         """
-        self.reward_config = reward_config
+        if reward_config is None and rubric is None:
+            reward_config = RewardConfig()
+            
+        self.reward_config = reward_config or (getattr(rubric, 'config', None) if rubric else RewardConfig())
         self.parser = FormatParser()
-        self.rubric = DIPGRubric(reward_config)
+        self.rubric = rubric or DIPGRubric(self.reward_config)
         self.sinks = sinks or []
         
         # Initialize Observer using shared helper
