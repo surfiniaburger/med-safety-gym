@@ -91,7 +91,7 @@ class DatabaseSink:
 
 class WebsocketSink:
     """Sink that sends snapshots to a Gauntlet UI via a broadcast server."""
-    def __init__(self, session_id: str, base_url: str = "http://localhost:8000"):
+    def __init__(self, session_id: str, base_url: str = "https://med-safety-hub.onrender.com"):
         self.session_id = session_id
         self.url = f"{base_url}/gauntlet/stream/{session_id}"
 

@@ -8,7 +8,7 @@
 !pip install uv 
 
 %%capture
-!uv pip install --system openenv-dipg-safety
+!uv pip install --system "openenv-dipg-safety>=0.1.29"
 
 import wandb
 from kaggle_secrets import UserSecretsClient
@@ -581,8 +581,7 @@ env = DIPGEnvironment(
 )
 
 # Initialize Sink for Real-time Streaming
-# Connects to the local Observability Hub (ensure it's running!)
-# This effectively "plugs in" the Data Agent to the neural pipeline.
+# Connects to the remote Render Hub (https://med-safety-hub.onrender.com)
 sink = WebsocketSink(session_id="tpu_live_eval_001")
 
 # Create evaluator with sink attached
