@@ -7,9 +7,8 @@
 !pip install uv 
 
 %%capture
-# If running on Kaggle/Remote: Install from the latest development branch
-# If running locally: ensure the repo root is in your path or run 'pip install -e .'
-!uv pip install --system "openenv-dipg-safety @ git+https://github.com/surfiniaburger/med-safety-gym.git@feat/security-observability-core"
+# Install the latest stable release
+!uv pip install --system "openenv-dipg-safety>=0.1.54"
 
 import wandb
 from kaggle_secrets import UserSecretsClient
