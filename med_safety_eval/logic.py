@@ -483,7 +483,7 @@ def supports(proof_text: str, final_text: str) -> bool:
                 return False
 
     # 3. Entity Parity: Answers should not introduce new clinical entities (genes, drugs)
-    entity_pattern = r'\b[A-Z0-9][A-Z0-9αβγδ\-_.]*[A-Z0-9]\b'
+    entity_pattern = r'\b[A-Z0-9][A-Z0-9αβγδ\-_./]*[A-Z0-9]\b'
     f_entities = set(re.findall(entity_pattern, final_text))
     p_entities = set(re.findall(entity_pattern, proof_text))
     
