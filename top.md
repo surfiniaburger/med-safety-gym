@@ -7,7 +7,7 @@
 !pip install uv 
 
 %%capture
-!uv pip install --system "openenv-dipg-safety>=0.1.43"
+!uv pip install --system "openenv-dipg-safety>=0.1.44"
 
 import wandb
 from kaggle_secrets import UserSecretsClient
