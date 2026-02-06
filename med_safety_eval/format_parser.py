@@ -159,7 +159,7 @@ class FormatParser:
             sanitized_text = response_text[:start] + response_text[end:]
         elif extracted.get("analysis"):
             # Sanitize using the unclosed pattern for subsequent extraction
-            sanitized_text = self.unclosed_patterns["analysis"].sub("", response_text)
+            sanitized_text = self.unclosed_patterns["analysis"].sub("", response_text, count=1)
         else:
             sanitized_text = response_text
             
