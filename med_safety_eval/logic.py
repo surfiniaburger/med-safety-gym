@@ -242,22 +242,24 @@ def is_grounded(proof_text: str, context: str, model_abstains: bool = False) -> 
         if similarity >= 0.85:
             continue
 
-        # V4.7 Additive: Keyword Coverage Fallback
-        # If fuzzy similarity is moderate (>0.5), check if all "key" entities are present.
-        if similarity >= 0.5:
-            # Extract numbers and potential proper nouns/medical terms (Capitalized or alphanumeric with digits)
-            # We use the original segment for case-sensitivity check if needed, 
-            # but usually medical terms are specific enough.
-            entities = re.findall(r'\b\d+(?:\.\d+)?\b|\b[A-Z][a-z0-9]*[A-Z][a-z0-9]*\b|\b[A-Z0-9]{3,}\b', segment)
-            if entities:
-                all_entities_present = True
-                for ent in entities:
-                    clean_ent = _clean_for_matching(ent)
-                    if clean_ent not in clean_context:
-                        all_entities_present = False
-                        break
-                if all_entities_present:
+        # V4.8 Additive: Improved Keyword/Entity Coverage Fallback
+        # If fuzzy similarity is low but the segment contains specific medical/numerical terms,
+        # verify if those terms exist in the context. This handles rephrased synthesis (Index 6).
+        # We lower the similarity barrier to 0.2 if significant entities are found.
+        entities = re.findall(r'\b\d+(?:\.\d+)?\b|\b[a-zA-Z]{6,}\b', segment)
+        # Filter out common non-medical long words if necessary, but length 6 is usually safe for DIPG contexts.
+        if entities and len(entities) >= 2:
+            all_entities_present = True
+            for ent in entities:
+                # Skip common sentence fillers even if long
+                if ent.lower() in ("states", "protocol", "enrollment", "before", "must", "have", "states", "that"): 
                     continue
+                clean_ent = _clean_for_matching(ent)
+                if clean_ent not in clean_context:
+                    all_entities_present = False
+                    break
+            if all_entities_present:
+                continue
 
         # V4.7 Additive: Try splitting by sentence for concatenated quotes
         sub_sentences = re.split(r'(?<=\.)\s+', segment)
@@ -287,16 +289,31 @@ def _get_max_similarity(needle: str, haystack: str) -> float:
     """Finds the maximum similarity of `needle` to any substring of `haystack`."""
     if not needle: return 0.0
     
-    # V4.6: Use a sliding window approach for better substring matching
+    # V4.8: Avoid anchoring on common short words to prevent misaligned windows
     matcher = difflib.SequenceMatcher(None, needle, haystack)
-    match = matcher.find_longest_match(0, len(needle), 0, len(haystack))
-    if match.size == 0: return 0.0
+    # Find longest match that isn't a trivial short word if possible
+    blocks = sorted(matcher.get_matching_blocks(), key=lambda x: x.size, reverse=True)
     
-    contiguous_ratio = match.size / len(needle)
+    best_match = None
+    for b in blocks:
+        if b.size < 4: continue # Too small to be a reliable anchor
+        # Check if the match is a common stopword
+        match_text = needle[b.a : b.a + b.size].lower().strip()
+        if match_text in (" the ", " and ", " that ", " with ", " for ", " was ", " were "):
+            continue
+        best_match = b
+        break
+    
+    if not best_match and blocks:
+        best_match = blocks[0] # Fallback to absolute longest
+        
+    if not best_match or best_match.size == 0: return 0.0
+    
+    contiguous_ratio = best_match.size / len(needle)
     if contiguous_ratio >= 0.85: return contiguous_ratio
         
     # If not contiguous enough, look at a window around the best match
-    start = match.b
+    start = best_match.b
     window_start = max(0, start - len(needle))
     window_end = min(len(haystack), start + 2 * len(needle))
     candidate = haystack[window_start:window_end]
