@@ -241,7 +241,7 @@ def is_grounded(proof_text: str, context: str, model_abstains: bool = False) -> 
         raw_segments = re.split(r'[\n]', proof_text)
         segments = []
         for s in raw_segments:
-            sub_segs = re.split(r'\[\.\.\.\]|\.\.\.|\(\.\+\)|\u2026', s)
+            sub_segs = re.split(r'\[\.\.\.\]|\.\.\.|\(\.\.\.\)|\u2026', s)
             for ss in sub_segs:
                 if len(ss.strip()) > 5:
                     segments.append(ss.strip())
@@ -463,7 +463,7 @@ def supports(proof_text: str, final_text: str) -> bool:
     outcomes = ["partial response", "stable disease", "progressive disease", "meets criteria"]
     for outcome in outcomes:
         if outcome in p_cleaned and outcome in f_cleaned:
-            neg_pattern = r"\b(no|not|didnt|did not|failed to|wont|cant|wont)\b(?:\s+\w+){0,10}?\s+" + re.escape(outcome)
+            neg_pattern = r"\b(no|not|didnt|did not|failed to|cant|wont)\b(?:\s+\w+){0,10}?\s+" + re.escape(outcome)
             p_neg = re.search(neg_pattern, p_cleaned)
             f_neg = re.search(neg_pattern, f_cleaned)
             if bool(p_neg) != bool(f_neg):
