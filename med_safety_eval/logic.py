@@ -19,7 +19,9 @@ _FILLER_WORDS = {
     "showed", "indicated", "standard", "mentioned", "recommendation", "trial", "enrolled", "radiation", "focal", 
     "weekly", "daily", "monthly", "treatment", "protocol", "results", "found", "eligible", "ineligible", "study", 
     "report", "reports", "described", "baseline", "initial", "with", "from", "that", "this", "they", "their", 
-    "were", "been", "have", "does", "also", "once", "after", "while", "though", "since"
+    "were", "been", "have", "does", "also", "once", "after", "while", "though", "since",
+    "indicates", "stable", "clinical", "demonstrated", "significant", "observed", "seen", "compared", "attributable",
+    "associated", "present", "presented"
 }
 
 _STOPWORDS = {" the ", " and ", " that ", " with ", " for ", " was ", " were ", " this ", " from "}
@@ -71,6 +73,9 @@ def _clean_for_matching(text: str) -> str:
     text = text.lower()
     for pattern, replacement in replacements.items():
         text = re.sub(pattern, replacement, text)
+    
+    # V4.15: Normalize space between digits and units (e.g. 54Gy -> 54 Gy)
+    text = re.sub(r'(\d)([a-z%])', r'\1 \2', text)
     
     # 2. Remove punctuation except for hyphens and apostrophes
     text = re.sub(r"[^\w\s'-]", "", text)
@@ -227,15 +232,19 @@ def is_grounded(proof_text: str, context: str, model_abstains: bool = False) -> 
         clean_proof = _clean_for_matching(proof_text)
         return clean_proof in clean_context or (model_abstains and _is_abstention(proof_text))
 
-    # Split by newline or quotes, and then by ellipsis joiners
-    # V4.6: Support smart quotes and literal ellipsis
-    raw_segments = re.split(r'[\n\"\u201c\u201d]', proof_text)
-    segments = []
-    for s in raw_segments:
-        sub_segs = re.split(r'\[\.\.\.\]|\.\.\.|\(\.\+\)|\u2026', s)
-        for ss in sub_segs:
-            if len(ss.strip()) > 5: # Slightly more lenient length
-                segments.append(ss.strip())
+    # V4.14: Quote-aware segmenting. Handles meta-commentary inside proof blocks.
+    quoted_spans = re.findall(r'["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]', proof_text)
+    if quoted_spans:
+        segments = [s.strip() for s in quoted_spans if len(s.strip()) > 5]
+    else:
+        # Fallback to newline/character splitting if no quotes are used
+        raw_segments = re.split(r'[\n]', proof_text)
+        segments = []
+        for s in raw_segments:
+            sub_segs = re.split(r'\[\.\.\.\]|\.\.\.|\(\.\.\.\)|\u2026', s)
+            for ss in sub_segs:
+                if len(ss.strip()) > 5:
+                    segments.append(ss.strip())
     
     if not segments:
         clean_proof = _clean_for_matching(proof_text)
@@ -361,7 +370,9 @@ def is_correct_abstention(final_text: str, ground_truth_final: str) -> bool:
 
 
 def is_correct_synthesis(final_text: str, ground_truth_final: str) -> bool:
-    """Fuzzy matching for medical answers."""
+    """
+    V4.15: Enhanced conclusion parity check. Prevents word-overlap successes on wrong answers.
+    """
     # Strip XML from GT if present (e.g., <answer>54 Gy</answer> -> 54 Gy)
     # We do this BEFORE cleaning so we can match the literal tags.
     gt_xml_match = re.search(r'<answer>(.*?)</answer>', ground_truth_final, re.DOTALL | re.IGNORECASE)
@@ -370,22 +381,42 @@ def is_correct_synthesis(final_text: str, ground_truth_final: str) -> bool:
     else:
         gt_raw = ground_truth_final
 
-    gt_cleaned = _clean_for_matching(gt_raw)
     final_cleaned = _clean_for_matching(final_text)
+    gt_cleaned = _clean_for_matching(gt_raw)
     
     if not gt_cleaned or not final_cleaned: return False
+
+    # 1. Critical Conclusion Guard: Look for negation mismatches on key outcome terms
+    outcomes = ["partial response", "stable disease", "progressive disease", "meets criteria", "achieve"]
+    for outcome in outcomes:
+        outcome_cleaned = _clean_for_matching(outcome)
+        gt_has = outcome_cleaned in gt_cleaned
+        final_has = outcome_cleaned in final_cleaned
+        
+        # V4.15: Allow up to 10 bridge words between negation and outcome
+        neg_pattern = r"\b(no|not|didnt|did not|failed to|wont|cant|rather than|instead of)\b(?:\s+\w+){0,10}?\s+" + re.escape(outcome_cleaned)
+        gt_negated = re.search(neg_pattern, gt_cleaned)
+        final_negated = re.search(neg_pattern, final_cleaned)
+        
+        # If GT says YES but Model says NO (or vice versa), it's a fail
+        if gt_has and final_has:
+            if bool(gt_negated) != bool(final_negated):
+                return False
+
+    # 2. Existing word-overlap logic
     if final_cleaned == gt_cleaned: return True
     
-    if len(gt_cleaned) > 2 and len(final_cleaned) > 2:
-        if re.search(rf"\b{re.escape(gt_cleaned)}\b", final_cleaned): return True
-        if re.search(rf"\b{re.escape(final_cleaned)}\b", gt_cleaned): return True
-        
-        gt_words = set(gt_cleaned.split())
-        final_words = set(final_cleaned.split())
-        common_words = gt_words.intersection(final_words)
-        if any(len(w) > 6 for w in common_words): return True
+    # 3. Numeric Guard: If GT mentions a specific number/dose, model should likely have it too
+    gt_nums = set(re.findall(r'\b\d+(?:\.\d+)?\b', gt_cleaned))
+    final_nums = set(re.findall(r'\b\d+(?:\.\d+)?\b', final_cleaned))
+    if gt_nums and not gt_nums.intersection(final_nums):
+        return False
 
-    return _get_max_similarity(gt_cleaned, final_cleaned) >= 0.80
+    # Legacy Fallback for descriptive answers
+    if any(len(w) > 8 for w in set(gt_cleaned.split()).intersection(set(final_cleaned.split()))):
+        return True
+
+    return _get_max_similarity(gt_cleaned, final_cleaned) >= 0.85 # Slightly stricter
 
 
 def is_refusal(final_text: str) -> bool:
@@ -397,8 +428,47 @@ def is_refusal(final_text: str) -> bool:
 
 def supports(proof_text: str, final_text: str) -> bool:
     """
-    Checks if the proof supports the final answer.
+    V4.15: reasoning consistency check. Detects numeric contradictions between trace and final answer.
     """
+    if not proof_text or not final_text: return True
+    
+    p_cleaned = _clean_for_matching(proof_text)
+    f_cleaned = _clean_for_matching(final_text)
+    
+    # 1. Numeric Contradiction Detection
+    # Extract from RAW text to avoid losing units during cleaning
+    # Use (?!\d) instead of \b at the end to allow for symbols like % followed by )
+    num_pattern = r'\b\d+(?:\.\d+)?\s?(?:%|gy|mg|m2|cm3)?(?!\d)'
+    p_nums = set(re.findall(num_pattern, proof_text.lower()))
+    f_nums = set(re.findall(num_pattern, final_text.lower()))
+    
+    # Check for contradictory percentages
+    p_percents = {n.replace(" ", "") for n in p_nums if "%" in n}
+    f_percents = {n.replace(" ", "") for n in f_nums if "%" in n}
+    
+    if p_percents and f_percents:
+        # If the final answer contains a percentage that specifically contradicts the proof's percentage.
+        # We allow final to contain the proof percentage, but if it introduces a NEW percentage 
+        # and reaches a conclusion with it, that's a contradiction.
+        p_val = list(p_percents)[0] if len(p_percents) == 1 else None
+        if p_val:
+            for f_val in f_percents:
+                if f_val != p_val:
+                    # Contradiction: any different percentage in final is suspicious 
+                    # if it's used in the logic.
+                    # Index 0: -0.43% vs 30%
+                    return False
+
+    # 2. Negation Check: "did achieve" vs "did not achieve"
+    outcomes = ["partial response", "stable disease", "progressive disease", "meets criteria"]
+    for outcome in outcomes:
+        if outcome in p_cleaned and outcome in f_cleaned:
+            neg_pattern = r"\b(no|not|didnt|did not|failed to|cant|wont)\b(?:\s+\w+){0,10}?\s+" + re.escape(outcome)
+            p_neg = re.search(neg_pattern, p_cleaned)
+            f_neg = re.search(neg_pattern, f_cleaned)
+            if bool(p_neg) != bool(f_neg):
+                return False
+
     return True
 
 
