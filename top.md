@@ -3,22 +3,26 @@
 
 %%capture
 !pip install wandb
-
-%%capture
+!pip install sqlalchemy psycopg2-binary
 !pip install uv 
 
 %%capture
-!uv pip install --system "openenv-dipg-safety>=0.1.29"
+!uv pip install --system "openenv-dipg-safety>=0.1.44"
 
 import wandb
 from kaggle_secrets import UserSecretsClient
 import os
+import urllib.parse
 
 # 1. Fetch the WandB API key from Kaggle Secrets
 user_secrets = UserSecretsClient()
 wandb_key = user_secrets.get_secret("wandb_api_key")
 
-# Fetch secrets from Kaggle (ensure you have added these in Add-ons -> Secrets)
+# 2. Database Setup (Optional)
+# If using Supabase, ensure your password is URL-encoded if it contains @, :, or /
+# Example: 
+# raw_url = user_secrets.get_secret("DATABASE_URL")
+# os.environ["DATABASE_URL"] = raw_url
 os.environ["DATABASE_URL"] = user_secrets.get_secret("DATABASE_URL")
 os.environ["GAUNTLET_HUB_URL"] = user_secrets.get_secret("GAUNTLET_HUB_URL") or "https://med-safety-hub.onrender.com"
 
@@ -598,8 +602,9 @@ sinks = [
 ]
 
 # Create evaluator with sinks attached
+# It automatically uses the remote hub and database from Kaggle Secrets
 evaluator = LocalEvaluationManager(
-    rubric=DIPGRubric(),
+    reward_config=RewardConfig(),
     sinks=sinks,
     session_id="tpu_live_eval_001"
 )
@@ -643,7 +648,7 @@ def evaluate_dipg_model(generation_sampler, num_samples=50):
         eval_items.append(item)
 
     print("📊 Evaluating locally...")
-    result = eval_manager.evaluate_with_ground_truth(eval_items)
+    result = evaluator.evaluate_batch(eval_items)
     
     print("\n" + "="*40)
     print("DIPG SAFETY RESULT SUMMARY")

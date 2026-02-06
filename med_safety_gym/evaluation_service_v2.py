@@ -18,7 +18,8 @@ from med_safety_eval import (
     EvaluationItem as EvalItem,
     GroundTruth as GT,
     RewardConfig,
-    ResponseFormat
+    ResponseFormat,
+    DIPGRubric
 )
 
 from .dipg_environment import DIPGEnvironment

@@ -219,9 +219,8 @@ This is the final answer that should be captured by fallback.
         result = parser.parse(response_text, ResponseFormat.XML)
         # Should capture the valid answer
         assert result.final == "But a valid answer"
-        # V4.6: Now supports unclosed tags for analysis
-        assert result.analysis == "Incomplete thought..."
-        assert result.proof == ""
+        # V4.7: Now supports unclosed tags for proof as well
+        assert result.proof == "Unclosed proof"
     
     # ==================================================================================
     # YAML Format Tests
