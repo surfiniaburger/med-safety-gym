@@ -19,7 +19,9 @@ _FILLER_WORDS = {
     "showed", "indicated", "standard", "mentioned", "recommendation", "trial", "enrolled", "radiation", "focal", 
     "weekly", "daily", "monthly", "treatment", "protocol", "results", "found", "eligible", "ineligible", "study", 
     "report", "reports", "described", "baseline", "initial", "with", "from", "that", "this", "they", "their", 
-    "were", "been", "have", "does", "also", "once", "after", "while", "though", "since"
+    "were", "been", "have", "does", "also", "once", "after", "while", "though", "since",
+    "indicates", "stable", "clinical", "demonstrated", "significant", "observed", "seen", "compared", "attributable",
+    "associated", "present", "presented"
 }
 
 _STOPWORDS = {" the ", " and ", " that ", " with ", " for ", " was ", " were ", " this ", " from "}
@@ -227,15 +229,19 @@ def is_grounded(proof_text: str, context: str, model_abstains: bool = False) -> 
         clean_proof = _clean_for_matching(proof_text)
         return clean_proof in clean_context or (model_abstains and _is_abstention(proof_text))
 
-    # Split by newline or quotes, and then by ellipsis joiners
-    # V4.6: Support smart quotes and literal ellipsis
-    raw_segments = re.split(r'[\n\"\u201c\u201d]', proof_text)
-    segments = []
-    for s in raw_segments:
-        sub_segs = re.split(r'\[\.\.\.\]|\.\.\.|\(\.\+\)|\u2026', s)
-        for ss in sub_segs:
-            if len(ss.strip()) > 5: # Slightly more lenient length
-                segments.append(ss.strip())
+    # V4.14: Quote-aware segmenting. Handles meta-commentary inside proof blocks.
+    quoted_spans = re.findall(r'["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]', proof_text)
+    if quoted_spans:
+        segments = [s.strip() for s in quoted_spans if len(s.strip()) > 5]
+    else:
+        # Fallback to newline/character splitting if no quotes are used
+        raw_segments = re.split(r'[\n]', proof_text)
+        segments = []
+        for s in raw_segments:
+            sub_segs = re.split(r'\[\.\.\.\]|\.\.\.|\(\.\+\)|\u2026', s)
+            for ss in sub_segs:
+                if len(ss.strip()) > 5:
+                    segments.append(ss.strip())
     
     if not segments:
         clean_proof = _clean_for_matching(proof_text)
