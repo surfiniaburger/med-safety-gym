@@ -24,9 +24,6 @@ wandb_key = user_secrets.get_secret("wandb_api_key")
 # raw_url = user_secrets.get_secret("DATABASE_URL")
 # os.environ["DATABASE_URL"] = raw_url
 os.environ["DATABASE_URL"] = user_secrets.get_secret("DATABASE_URL")
-
-# Fetch secrets from Kaggle (ensure you have added these in Add-ons -> Secrets)
-os.environ["DATABASE_URL"] = user_secrets.get_secret("DATABASE_URL")
 os.environ["GAUNTLET_HUB_URL"] = user_secrets.get_secret("GAUNTLET_HUB_URL") or "https://med-safety-hub.onrender.com"
 
 # Verify environment
