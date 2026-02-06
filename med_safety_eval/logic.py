@@ -507,13 +507,14 @@ def supports(proof_text: str, final_text: str) -> bool:
     entity_pattern = r'\b[A-Za-z0-9][A-Za-z0-9αβγδ\-_./]*[A-Za-z0-9]\b'
     f_entities = set(re.findall(entity_pattern, final_text, re.IGNORECASE))
     p_entities = set(re.findall(entity_pattern, proof_text, re.IGNORECASE))
+    p_entities_lower = {e.lower() for e in p_entities}
     
     for ent in f_entities:
         if len(ent) < 4: continue 
         if ent.lower() in _FILLER_WORDS: continue 
         
         # Check against proof entities (case-insensitive for safety)
-        if ent.lower() not in {e.lower() for e in p_entities}:
+        if ent.lower() not in p_entities_lower:
             return False
 
     return True
