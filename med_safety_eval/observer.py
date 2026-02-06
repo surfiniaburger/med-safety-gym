@@ -95,6 +95,10 @@ class DatabaseSink:
                 hint = "\nHINT: Your password may contain special characters (like '@' or ':'). " \
                        "Please ensure your DATABASE_URL is properly URL-encoded. " \
                        "You can use 'urllib.parse.quote_plus' for the password part."
+            elif "Cannot assign requested address" in error_msg or "6432" in error_msg:
+                hint = "\nHINT: This often indicates an IPv6 connection attempt in an IPv4-only environment. " \
+                       "If using Supabase, try using the Transaction Pooler (Session Pooler) hostname " \
+                       "and port (6543 or 5432) which supports IPv4."
             
             logger.warning(f"Database connection failed: {error_msg}{hint}. DatabaseSink will be a no-op.")
 

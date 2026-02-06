@@ -23,7 +23,9 @@ ABSTENTION_KEYWORDS = (
     "no information regarding", "no mentions", "does not provide", "no information",
     "not eligible", "ineligible", "is ineligible", "is not eligible", "not applicable",
     "no information provided", "provided context does not", "does not include",
-    "no information about", "not contain", "does not contain", "indeterminate"
+    "no information about", "not contain", "does not contain", "indeterminate",
+    "no evidence found", "no evidence", "no mention is made", "missing information",
+    "ambiguous", "discrepancy"
 )
 
 REFUSAL_KEYWORDS = (
