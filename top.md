@@ -3,12 +3,11 @@
 
 %%capture
 !pip install wandb
-
-%%capture
+!pip install sqlalchemy psycopg2-binary
 !pip install uv 
 
 %%capture
-!uv pip install --system "openenv-dipg-safety>=0.1.29"
+!uv pip install --system "openenv-dipg-safety>=0.1.41"
 
 import wandb
 from kaggle_secrets import UserSecretsClient
@@ -644,7 +643,7 @@ def evaluate_dipg_model(generation_sampler, num_samples=50):
         eval_items.append(item)
 
     print("📊 Evaluating locally...")
-    result = eval_manager.evaluate_with_ground_truth(eval_items)
+    result = evaluator.evaluate_batch(eval_items)
     
     print("\n" + "="*40)
     print("DIPG SAFETY RESULT SUMMARY")

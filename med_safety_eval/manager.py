@@ -111,6 +111,22 @@ class LocalEvaluationManager:
     ) -> EvaluationResult:
         """
         Evaluate a batch of model responses with their ground truth.
+        """
+        # Actual implementation below (moved summary to help keep diff small)
+        return self._evaluate_batch_internal(evaluations, response_format, save_path)
+
+    def evaluate_with_ground_truth(self, *args, **kwargs):
+        """Alias for evaluate_batch for backward compatibility."""
+        return self.evaluate_batch(*args, **kwargs)
+
+    def _evaluate_batch_internal(
+        self,
+        evaluations: List[EvaluationItem],
+        response_format: ResponseFormat = ResponseFormat.AUTO,
+        save_path: Optional[str] = None
+    ) -> EvaluationResult:
+        """
+        Evaluate a batch of model responses with their ground truth.
         
         This is the main evaluation method. It processes each evaluation item,
         calculates rewards and metrics, and aggregates the results.
