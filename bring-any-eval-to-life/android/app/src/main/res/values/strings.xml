@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DIPG Safety</string>
+    <string name="title_activity_main">DIPG Safety</string>
+    <string name="package_name">com.surfiniaburger.dipgsafety</string>
+    <string name="custom_url_scheme">com.surfiniaburger.dipgsafety</string>
+</resources>
