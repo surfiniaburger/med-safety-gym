@@ -35,7 +35,7 @@ allprojects {
         }
     }
     
-    ext.kotlinVersion = '1.9.22'
+    ext.kotlinVersion = '2.0.0'
     configurations.all {
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
