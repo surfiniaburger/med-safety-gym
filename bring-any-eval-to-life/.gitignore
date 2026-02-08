@@ -23,7 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 # Android build outputs
-android/
+# Android build outputs
+android/app/build
+android/.gradle
+android/local.properties
+*.keystore
 ios/
 .android-keys/
 
