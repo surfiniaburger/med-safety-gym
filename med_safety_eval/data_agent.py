@@ -172,8 +172,19 @@ class DataAgent:
         """)
         
         if self.engine.dialect.name != 'postgresql':
-            # Fallback for SQLite/others if needed
-            query = text("SELECT session_id, metadata FROM neural_snapshots GROUP BY session_id")
+            # Fallback for SQLite/others: Performant INNER JOIN to get latest metadata and counts
+            query = text("""
+                SELECT
+                    s1.session_id,
+                    s1.metadata,
+                    s2.step_count
+                FROM neural_snapshots AS s1
+                INNER JOIN (
+                    SELECT session_id, MAX(step) AS max_step, COUNT(*) AS step_count
+                    FROM neural_snapshots
+                    GROUP BY session_id
+                ) AS s2 ON s1.session_id = s2.session_id AND s1.step = s2.max_step
+            """)
             
         sessions = []
         with self.engine.connect() as conn:
