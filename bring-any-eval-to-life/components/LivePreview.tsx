@@ -5,12 +5,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ArrowDownTrayIcon, PlusIcon, ViewColumnsIcon, DocumentIcon, CodeBracketIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Creation } from './CreationHistory';
+import { useVisionRegeneration } from '../lib-web/useVisionRegeneration';
+import { RegenerationForm } from './RegenerationForm';
+import { SparklesIcon as SparklesIconSolid } from '@heroicons/react/24/solid';
+import { AnimatePresence } from 'framer-motion';
 
 interface LivePreviewProps {
   creation: Creation | null;
   isLoading: boolean;
   isFocused: boolean;
   onReset: () => void;
+  onUpdate?: (updatedCreation: Creation) => void;
   title?: string;
 }
 
@@ -110,9 +115,31 @@ const PdfRenderer = ({ dataUrl }: { dataUrl: string }) => {
   );
 };
 
-export const LivePreview: React.FC<LivePreviewProps> = ({ creation, isLoading, isFocused, onReset, title }) => {
+export const LivePreview: React.FC<LivePreviewProps> = ({ creation, isLoading, isFocused, onReset, onUpdate, title }) => {
   const [loadingStep, setLoadingStep] = useState(0);
   const [showSplitView, setShowSplitView] = useState(false);
+  const [showRegenForm, setShowRegenForm] = useState(false);
+  const iframeContainerRef = useRef<HTMLDivElement>(null);
+
+  const { regenerate, isRegenerating } = useVisionRegeneration();
+
+  const handleVisionRegenerate = async (critique: string) => {
+    if (!iframeContainerRef.current || !creation) return;
+
+    try {
+      const newHtml = await regenerate(iframeContainerRef.current, critique);
+      if (newHtml && onUpdate) {
+        onUpdate({
+          ...creation,
+          html: newHtml,
+          timestamp: new Date()
+        });
+        setShowRegenForm(false);
+      }
+    } catch (err) {
+      console.error("Regeneration failed", err);
+    }
+  };
 
   // Handle loading animation steps
   useEffect(() => {
@@ -191,6 +218,18 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ creation, isLoading, i
         <div className="flex items-center justify-end space-x-1 w-32">
           {!isLoading && creation && (
             <>
+              {/* Agentic Vision Toggle */}
+              <button
+                onClick={() => setShowRegenForm(!showRegenForm)}
+                title="Agentic Refinement (Vision)"
+                className={`group p-2 rounded-lg transition-all duration-300 shadow-sm flex items-center justify-center ${showRegenForm
+                    ? 'bg-blue-600 text-white shadow-blue-500/40'
+                    : 'bg-blue-500/10 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 border border-blue-500/20'
+                  }`}
+              >
+                <SparklesIconSolid className={`w-5 h-5 transition-transform duration-300 group-hover:scale-110 group-active:scale-95 ${showRegenForm ? 'animate-pulse' : ''}`} />
+              </button>
+
               {creation.originalImage && (
                 <button
                   onClick={() => setShowSplitView(!showSplitView)}
@@ -275,13 +314,26 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ creation, isLoading, i
             )}
 
             {/* App Preview Panel */}
-            <div className={`relative h-full bg-white transition-all duration-500 ${showSplitView && creation.originalImage ? 'w-full md:w-1/2 h-1/2 md:h-full' : 'w-full'}`}>
+            <div
+              ref={iframeContainerRef}
+              className={`relative h-full bg-white transition-all duration-500 ${showSplitView && creation.originalImage ? 'w-full md:w-1/2 h-1/2 md:h-full' : 'w-full'}`}
+            >
               <iframe
                 title="Gemini Live Preview"
                 srcDoc={creation.html}
                 className="w-full h-full"
                 sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"
               />
+
+              <AnimatePresence>
+                {showRegenForm && !isLoading && (
+                  <RegenerationForm
+                    onRegenerate={handleVisionRegenerate}
+                    isRegenerating={isRegenerating}
+                    onClose={() => setShowRegenForm(false)}
+                  />
+                )}
+              </AnimatePresence>
             </div>
           </>
         ) : null}

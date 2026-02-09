@@ -44,12 +44,13 @@ export async function bringToLife(jsonContent: string, customPrompt?: string): P
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: GEMINI_MODEL,
-      contents: {
+      contents: [{
+        role: 'user',
         parts: parts
-      },
+      }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.4,  // Higher temperature for more creativity with mundane inputs
+        temperature: 0.4,
       },
     });
 
@@ -58,6 +59,64 @@ export async function bringToLife(jsonContent: string, customPrompt?: string): P
     return text;
   } catch (error) {
     console.error("Gemini Generation Error:", error);
+    throw error;
+  }
+}
+
+export async function regenerateWithVision(
+  screenshotBase64: string,
+  critique: string
+): Promise<string> {
+  // Extract base64 data from data URL if needed
+  const base64Data = screenshotBase64.includes(',')
+    ? screenshotBase64.split(',')[1]
+    : screenshotBase64;
+
+  const parts = [
+    {
+      inlineData: {
+        mimeType: "image/png",
+        data: base64Data,
+      },
+    },
+    {
+      text: `
+        CRITIQUE: ${critique}
+        
+        TASK: You are an expert Simulation Designer. I've provided a screenshot of the current clinical simulation.
+        Analyze the screenshot and the critique provided above. 
+        
+        Using Agentic Vision, identify the elements that need to be improved, removed, or added.
+        Then, generate the COMPLETE, REFINED HTML for the simulation.
+        
+        REQUIREMENTS:
+        1. Maintain the clinical, premium aesthetic.
+        2. Ensure all interactive elements remain functional.
+        3. Do NOT use external images. Use SVGs/CSS.
+        4. Return ONLY raw HTML.
+      `
+    }
+  ];
+
+  try {
+    const response: GenerateContentResponse = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: [{
+        role: 'user',
+        parts: parts
+      }],
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        tools: [{ codeExecution: {} }], // Enable Agentic Vision Code Execution
+        temperature: 0.2, // Lower temperature for more grounded refinements
+      },
+    });
+
+    let text = response.text || "<!-- Failed to regenerate content -->";
+    text = text.replace(/^```html\s*/, '').replace(/^```\s*/, '').replace(/```$/, '');
+    return text;
+  } catch (error) {
+    console.error("Gemini Vision Regeneration Error:", error);
     throw error;
   }
 }

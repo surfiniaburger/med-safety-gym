@@ -532,6 +532,7 @@ const AppContent: React.FC = () => {
           (view === 'selection' && (isGenerating || activeCreation !== null))
         }
         onReset={view === 'simulator' ? handleSolveNode : handleReset}
+        onUpdate={handleSelectCreation}
         title={view === 'simulator' ? "Intervention: NEURO-SIM Dashboard" : undefined}
       />
 
