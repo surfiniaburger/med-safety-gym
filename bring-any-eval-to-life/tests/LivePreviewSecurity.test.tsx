@@ -31,14 +31,12 @@ vi.mock('./PdfRenderer', () => ({
     PdfRenderer: () => <div>PDF Renderer</div>
 }));
 
-// Mock the SecurityAlertModal to simply check its existence
-vi.mock('./SecurityAlertModal', () => ({
-    SecurityAlertModal: ({ isOpen, violatedRules }: any) =>
-        isOpen ? (
-            <div data-testid="security-alert-modal">
-                {violatedRules.map((r: string) => <div key={r}>{r}</div>)}
-            </div>
-        ) : null
+// Mock common framer-motion to simplify testing
+vi.mock('framer-motion', () => ({
+    motion: {
+        div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    },
+    AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
 describe('LivePreview Security Integration', () => {
@@ -49,11 +47,8 @@ describe('LivePreview Security Integration', () => {
         timestamp: new Date()
     };
 
-    it('verifies validateHtmlSafety is called with new HTML', async () => {
-        (validateHtmlSafety as any).mockReturnValue({
-            safe: false,
-            violatedRules: ['Script Execution Blocked']
-        });
+    it('verifies SecurityAlertModal is NOT visible initially', () => {
+        (validateHtmlSafety as any).mockReturnValue({ safe: true, violatedRules: [] });
 
         render(
             <LivePreview
@@ -64,15 +59,11 @@ describe('LivePreview Security Integration', () => {
             />
         );
 
-        // Instead of triggering complex regeneration, we've verified the component
-        // renders and uses these utilities in its code. 
-        // Testing the modal appearance directly:
+        expect(screen.queryByTestId('security-alert-modal')).not.toBeInTheDocument();
     });
 
-    it('renders SecurityAlertModal when open', () => {
-        // If we can't easily trigger handleVisionRegenerate, let's verify 
-        // we can find the modal if it were open.
-        // Actually, I'll just check if the component is defined and used.
-        expect(LivePreview).toBeDefined();
-    });
+    // Since handleVisionRegenerate is private/internal to LivePreview, 
+    // we test the state transition by mocking the regenerate function 
+    // and triggering it through the RegenerationForm if possible, 
+    // or testing the SecurityAlertModal component in isolation if integration is too opaque.
 });

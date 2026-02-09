@@ -36,6 +36,15 @@ class DataAgent:
             # Table for caching embeddings
             if self.engine.dialect.name == 'sqlite':
                 conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS neural_snapshots (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT,
+                        step INTEGER,
+                        scores TEXT,
+                        metadata TEXT
+                    )
+                """))
+                conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS snapshot_embeddings (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         snapshot_id INTEGER UNIQUE,
@@ -43,14 +52,44 @@ class DataAgent:
                         FOREIGN KEY(snapshot_id) REFERENCES neural_snapshots(id)
                     )
                 """))
-            else: # PostgreSQL (placeholder for PgVector if ever added)
                 conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS snapshot_embeddings (
-                        id SERIAL PRIMARY KEY,
-                        snapshot_id INTEGER UNIQUE,
-                        embedding TEXT
+                    CREATE TABLE IF NOT EXISTS gauntlet_commands (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT,
+                        command TEXT,
+                        timestamp REAL
                     )
                 """))
+            else: # PostgreSQL
+                try:
+                    conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                    # Table for neuro-snapshots if not exists
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS neural_snapshots (
+                            id SERIAL PRIMARY KEY,
+                            session_id TEXT,
+                            step INTEGER,
+                            scores JSONB,
+                            metadata JSONB
+                        )
+                    """))
+                    # Table for caching embeddings using pgvector
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS snapshot_embeddings (
+                            id SERIAL PRIMARY KEY,
+                            snapshot_id INTEGER UNIQUE REFERENCES neural_snapshots(id),
+                            embedding VECTOR(768)
+                        )
+                    """))
+                except Exception as e:
+                    logger.warning(f"pgvector initialization failed (fallback to JSONB): {e}")
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS snapshot_embeddings (
+                            id SERIAL PRIMARY KEY,
+                            snapshot_id INTEGER UNIQUE REFERENCES neural_snapshots(id),
+                            embedding TEXT
+                        )
+                    """))
 
     def sync_github_results(self, base_dirs: List[str] = ["results", "run-results"]):
         """
@@ -182,6 +221,8 @@ class DataAgent:
             res = requests.post(url, json=payload, timeout=5)
             if res.status_code == 200:
                 return res.json()["embedding"]["values"]
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Embedding network error: {e}")
         except Exception as e:
             logger.error(f"Embedding failed: {e}")
         return None
@@ -218,37 +259,83 @@ class DataAgent:
         if not query_embedding:
             return keyword_results
 
-        semantic_results = []
+        keyword_ids = {k["id"] for k in keyword_results}
+        semantic_matches = []
+        
         with self.engine.connect() as conn:
-            # Load all cached embeddings (Hubs are typically small, < 1000 snapshots)
-            # For larger datasets, this would need PGVector
-            embed_data = conn.execute(text("""
-                SELECT s.id, s.session_id, s.step, s.scores, s.metadata, e.embedding
-                FROM neural_snapshots s
-                JOIN snapshot_embeddings e ON s.id = e.snapshot_id
-            """)).fetchall()
+            if self.engine.dialect.name == 'postgresql':
+                # true pgvector path: offload similarity to DB
+                try:
+                    # Using <=> for cosine distance (1 - similarity)
+                    # We want similarity > 0.7, so distance < 0.3
+                    res = conn.execute(text("""
+                        SELECT snapshot_id, (1 - (embedding <=> :emb)) as similarity
+                        FROM snapshot_embeddings
+                        WHERE (1 - (embedding <=> :emb)) > 0.7
+                        ORDER BY embedding <=> :emb
+                        LIMIT :limit
+                    """), {"emb": str(query_embedding), "limit": limit})
+                    for row in res:
+                        if row[0] not in keyword_ids:
+                            semantic_matches.append((row[0], float(row[1])))
+                except Exception as e:
+                    logger.error(f"Postgres vector search failed: {e}")
+            
+            if not semantic_matches and self.engine.dialect.name != 'postgresql':
+                # Fallback: In-memory numpy comparison (SQLite or missing pgvector)
+                embed_data = conn.execute(text("""
+                    SELECT snapshot_id, embedding FROM snapshot_embeddings
+                """)).fetchall()
 
-            for row in embed_data:
-                vec = json.loads(row[5])
-                similarity = np.dot(query_embedding, vec) / (np.linalg.norm(query_embedding) * np.linalg.norm(vec))
-                if similarity > 0.7: # Threshold
-                    # Avoid duplicates with keyword search
-                    if not any(k["id"] == row[0] for k in keyword_results):
-                        sid, step, scores, meta = row[1], row[2], row[3], row[4]
-                        if isinstance(scores, str): scores = json.loads(scores)
-                        if isinstance(meta, str): meta = json.loads(meta)
-                        semantic_results.append({
-                            "id": row[0], 
-                            "session_id": sid, 
-                            "step": step, 
-                            "scores": scores, 
-                            "metadata": meta,
-                            "similarity": float(similarity)
-                        })
+                for row in embed_data:
+                    snap_id, vec_json = row[0], row[1]
+                    if snap_id in keyword_ids:
+                        continue
+                        
+                    # Handle both JSONB and TEXT storage
+                    vec = json.loads(vec_json) if isinstance(vec_json, str) else vec_json
+                    similarity = np.dot(query_embedding, vec) / (np.linalg.norm(query_embedding) * np.linalg.norm(vec))
+                    
+                    if similarity > 0.7:
+                        semantic_matches.append((snap_id, float(similarity)))
 
-        # Sort and merge
-        semantic_results.sort(key=lambda x: x["similarity"], reverse=True)
-        return (keyword_results + semantic_results)[:limit]
+        # Sort matches by similarity and take top N
+        semantic_matches.sort(key=lambda x: x[1], reverse=True)
+        top_semantic_ids = [m[0] for m in semantic_matches[:limit]]
+        similarity_map = {m[0]: m[1] for m in semantic_matches[:limit]}
+
+        # Hydrate top semantic results
+        semantic_results = []
+        if top_semantic_ids:
+            with self.engine.connect() as conn:
+                res = conn.execute(text("""
+                    SELECT id, session_id, step, scores, metadata 
+                    FROM neural_snapshots WHERE id IN :ids
+                """), {"ids": tuple(top_semantic_ids)})
+                for row in res:
+                    sid, step, scores, meta = row[1], row[2], row[3], row[4]
+                    if isinstance(scores, str): scores = json.loads(scores)
+                    if isinstance(meta, str): meta = json.loads(meta)
+                    semantic_results.append({
+                        "id": row[0], 
+                        "session_id": sid, 
+                        "step": step, 
+                        "scores": scores, 
+                        "metadata": meta,
+                        "similarity": similarity_map.get(row[0], 0.0),
+                        "search_type": "semantic"
+                    })
+
+        # Tag keyword results with max relevance
+        for k in keyword_results:
+            k["search_type"] = "keyword"
+            k["similarity"] = 1.0 
+
+        # Unified Merging & Ranking
+        combined = keyword_results + semantic_results
+        combined.sort(key=lambda x: x.get("similarity", 0), reverse=True)
+        
+        return combined[:limit]
 
     def get_rag_context(self, query: str, limit: int = 5) -> str:
         """
@@ -352,16 +439,25 @@ class DataAgent:
     def get_all_sessions(self) -> List[Dict[str, Any]]:
         """Lists all unique sessions in the database."""
         if not self.engine: return []
-        query = text("""
-            SELECT DISTINCT session_id, metadata, 
-            (SELECT count(*) FROM neural_snapshots s2 WHERE s2.session_id = s1.session_id) as step_count
-            FROM neural_snapshots s1
-        """)
         if self.engine.dialect.name == 'postgresql':
             query = text("""
                 SELECT DISTINCT ON (session_id) session_id, metadata, 
                 (SELECT count(*) FROM neural_snapshots s2 WHERE s2.session_id = s1.session_id) as step_count
                 FROM neural_snapshots s1 ORDER BY session_id, step DESC
+            """)
+        else:
+            # Fallback for SQLite/others: Performant INNER JOIN to get latest metadata and counts
+            query = text("""
+                SELECT 
+                    s1.session_id, 
+                    s1.metadata, 
+                    s2.step_count
+                FROM neural_snapshots AS s1
+                INNER JOIN (
+                    SELECT session_id, MAX(step) AS max_step, COUNT(*) AS step_count
+                    FROM neural_snapshots
+                    GROUP BY session_id
+                ) AS s2 ON s1.session_id = s2.session_id AND s1.step = s2.max_step
             """)
         sessions = []
         with self.engine.connect() as conn:
@@ -401,7 +497,7 @@ class DataAgent:
         """Retrieves and clears a command for a session atomically."""
         if not self.engine: return None
         if self.engine.dialect.name != 'postgresql':
-            raise NotImplementedError("Atomic pop_command only supported for PostgreSQL.")
+            raise NotImplementedError("Atomic pop_command is only supported for PostgreSQL backends.")
         with self.engine.begin() as conn:
             result = conn.execute(
                 text("DELETE FROM gauntlet_commands WHERE session_id = :sid RETURNING command"),

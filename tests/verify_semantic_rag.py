@@ -1,5 +1,6 @@
 import os
 import json
+from sqlalchemy import text
 from med_safety_eval.data_agent import DataAgent
 
 def test_hybrid_search():
@@ -41,5 +42,4 @@ def test_hybrid_search():
     print("\n✅ Verification Complete.")
 
 if __name__ == "__main__":
-    from sqlalchemy import text
     test_hybrid_search()
