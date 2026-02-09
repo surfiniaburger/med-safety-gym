@@ -12,6 +12,7 @@ import { PreviewHeader } from './PreviewHeader';
 import { PdfRenderer } from './PdfRenderer';
 import { validateHtmlSafety } from '../lib-web/security';
 import { useToast } from './Toast';
+import { SecurityAlertModal } from './SecurityAlertModal';
 
 interface LivePreviewProps {
   creation: Creation | null;
@@ -43,6 +44,8 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   const [loadingStep, setLoadingStep] = useState(0);
   const [showSplitView, setShowSplitView] = useState(false);
   const [showRegenForm, setShowRegenForm] = useState(false);
+  const [violatedRules, setViolatedRules] = useState<string[]>([]);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
 
   const { regenerate, isRegenerating } = useVisionRegeneration();
@@ -58,11 +61,12 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     try {
       const newHtml = await regenerate(iframeContainerRef.current, critique);
 
-      // Phase 14.2: Security Validation
+      // Phase 14.5: Security Validation with Premium Modal
       const validation = validateHtmlSafety(newHtml);
       if (!validation.safe) {
-        console.error("Agentic Vision safety check failed:", validation.reason);
-        showToast(`Safety Warning: ${validation.reason}`, "error");
+        console.error("Agentic Vision safety check failed:", validation.violatedRules);
+        setViolatedRules(validation.violatedRules);
+        setIsSecurityModalOpen(true);
         return;
       }
 
@@ -192,6 +196,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           </>
         ) : null}
       </div>
+
+      <SecurityAlertModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
+        onReviewRubric={() => {
+          setIsSecurityModalOpen(false);
+          if (onSolveNode) onSolveNode(); // This takes the user back to Gauntlet
+        }}
+        violatedRules={violatedRules}
+      />
     </div>
   );
 };

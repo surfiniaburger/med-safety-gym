@@ -1,6 +1,8 @@
 import os
 import json
 import time
+import numpy as np
+import requests
 from typing import List, Dict, Any, Optional
 from sqlalchemy import create_engine, text
 from .utils.logging import get_logger
@@ -18,6 +20,7 @@ class DataAgent:
     """
     def __init__(self, db_url: Optional[str] = None):
         self.db_url = db_url or os.getenv("DATABASE_URL")
+        self.api_key = os.getenv("GOOGLE_API_KEY")
         if not self.db_url:
             logger.warning("DATABASE_URL not set. DataAgent will run in mock mode.")
             self.engine = None
@@ -25,6 +28,29 @@ class DataAgent:
             if self.db_url.startswith("postgres://"):
                 self.db_url = self.db_url.replace("postgres://", "postgresql://", 1)
             self.engine = create_engine(self.db_url)
+            self._ensure_tables()
+
+    def _ensure_tables(self):
+        """Ensures all necessary tables exist."""
+        with self.engine.begin() as conn:
+            # Table for caching embeddings
+            if self.engine.dialect.name == 'sqlite':
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS snapshot_embeddings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        snapshot_id INTEGER UNIQUE,
+                        embedding TEXT,
+                        FOREIGN KEY(snapshot_id) REFERENCES neural_snapshots(id)
+                    )
+                """))
+            else: # PostgreSQL (placeholder for PgVector if ever added)
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS snapshot_embeddings (
+                        id SERIAL PRIMARY KEY,
+                        snapshot_id INTEGER UNIQUE,
+                        embedding TEXT
+                    )
+                """))
 
     def sync_github_results(self, base_dirs: List[str] = ["results", "run-results"]):
         """
@@ -112,32 +138,117 @@ class DataAgent:
                         "meta": json.dumps(snapshot["metadata"])
                     }
                 )
+        
+        # Generate embedding in the background (simplified for this task)
+        self._cache_embedding(snapshot)
 
-    def search_snapshots(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
+    def _cache_embedding(self, snapshot: Dict[str, Any]):
+        """Caches embedding for a snapshot if it doesn't exist."""
+        if not self.engine or not self.api_key: return
+        
+        with self.engine.begin() as conn:
+            snap_id = conn.execute(
+                text("SELECT id FROM neural_snapshots WHERE session_id = :sid AND step = :step"),
+                {"sid": snapshot["session_id"], "step": snapshot["step"]}
+            ).fetchone()
+            
+            if not snap_id: return
+            
+            exists = conn.execute(
+                text("SELECT id FROM snapshot_embeddings WHERE snapshot_id = :sid"),
+                {"sid": snap_id[0]}
+            ).fetchone()
+            
+            if not exists:
+                text_to_embed = f"{snapshot['metadata'].get('response', '')} {json.dumps(snapshot['scores'])}"
+                vec = self.embed_text(text_to_embed)
+                if vec:
+                    conn.execute(
+                        text("INSERT INTO snapshot_embeddings (snapshot_id, embedding) VALUES (:sid, :emb)"),
+                        {"sid": snap_id[0], "emb": json.dumps(vec)}
+                    )
+
+    def embed_text(self, text_input: str) -> Optional[List[float]]:
+        """Fetch embeddings from Gemini API."""
+        if not self.api_key:
+            return None
+        
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key={self.api_key}"
+            payload = {
+                "model": "models/embedding-001",
+                "content": {"parts": [{"text": text_input}]}
+            }
+            res = requests.post(url, json=payload, timeout=5)
+            if res.status_code == 200:
+                return res.json()["embedding"]["values"]
+        except Exception as e:
+            logger.error(f"Embedding failed: {e}")
+        return None
+
+    def search_snapshots(self, query: str, limit: int = 20, semantic: bool = True) -> List[Dict[str, Any]]:
         """
-        Basic keyword search across metadata (responses and tasks).
+        Hybrid search: Keyword search + Semantic search fallback.
         """
         if not self.engine: return []
         
-        # PostgreSQL-friendly search if available, but staying compatible with SQLite
-        # metadata is JSON, so we cast to TEXT for ILIKE search
+        # 1. Keyword Search
+        keyword_results = []
         search_query = text("""
-            SELECT session_id, step, scores, metadata 
+            SELECT id, session_id, step, scores, metadata 
             FROM neural_snapshots 
             WHERE LOWER(CAST(metadata AS TEXT)) LIKE LOWER(:q)
             ORDER BY id DESC
             LIMIT :limit
         """)
         
-        results = []
         with self.engine.connect() as conn:
             res = conn.execute(search_query, {"q": f"%{query}%", "limit": limit})
             for row in res:
-                sid, step, scores, meta = row[0], row[1], row[2], row[3]
+                sid, step, scores, meta = row[1], row[2], row[3], row[4]
                 if isinstance(scores, str): scores = json.loads(scores)
                 if isinstance(meta, str): meta = json.loads(meta)
-                results.append({"session_id": sid, "step": step, "scores": scores, "metadata": meta})
-        return results
+                keyword_results.append({"id": row[0], "session_id": sid, "step": step, "scores": scores, "metadata": meta})
+
+        if not semantic or not self.api_key:
+            return keyword_results
+
+        # 2. Semantic Search (Simple In-Memory Cosine Similarity for small Hub datasets)
+        query_embedding = self.embed_text(query)
+        if not query_embedding:
+            return keyword_results
+
+        semantic_results = []
+        with self.engine.connect() as conn:
+            # Load all cached embeddings (Hubs are typically small, < 1000 snapshots)
+            # For larger datasets, this would need PGVector
+            embed_data = conn.execute(text("""
+                SELECT s.id, s.session_id, s.step, s.scores, s.metadata, e.embedding
+                FROM neural_snapshots s
+                JOIN snapshot_embeddings e ON s.id = e.snapshot_id
+            """)).fetchall()
+
+            for row in embed_data:
+                vec = json.loads(row[5])
+                similarity = np.dot(query_embedding, vec) / (np.linalg.norm(query_embedding) * np.linalg.norm(vec))
+                if similarity > 0.7: # Threshold
+                    # Avoid duplicates with keyword search
+                    if not any(k["id"] == row[0] for k in keyword_results):
+                        sid, step, scores, meta = row[1], row[2], row[3], row[4]
+                        if isinstance(scores, str): scores = json.loads(scores)
+                        if isinstance(meta, str): meta = json.loads(meta)
+                        semantic_results.append({
+                            "id": row[0], 
+                            "session_id": sid, 
+                            "step": step, 
+                            "scores": scores, 
+                            "metadata": meta,
+                            "similarity": float(similarity)
+                        })
+
+        # Sort and merge
+        semantic_results.sort(key=lambda x: x["similarity"], reverse=True)
+        return (keyword_results + semantic_results)[:limit]
 
     def get_rag_context(self, query: str, limit: int = 5) -> str:
         """
