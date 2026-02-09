@@ -56,8 +56,8 @@ export const SecurityAlertModal: React.FC<SecurityAlertModalProps> = ({
                             <div className="w-full bg-white/5 rounded-2xl p-4 mb-8 border border-white/5 text-left">
                                 <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-2 block">Violation Triggers:</span>
                                 <ul className="space-y-2">
-                                    {violatedRules.map((rule, idx) => (
-                                        <li key={idx} className="flex items-start gap-2 text-xs text-rose-300/80 font-mono">
+                                    {violatedRules.map((rule) => (
+                                        <li key={rule} className="flex items-start gap-2 text-xs text-rose-300/80 font-mono">
                                             <div className="w-1 h-1 rounded-full bg-rose-500 mt-1.5 flex-shrink-0" />
                                             {rule}
                                         </li>
