@@ -497,7 +497,7 @@ class DataAgent:
         """Retrieves and clears a command for a session atomically."""
         if not self.engine: return None
         if self.engine.dialect.name != 'postgresql':
-            raise NotImplementedError("Atomic pop_command only supported for PostgreSQL.")
+            raise NotImplementedError("Atomic pop_command is only supported for PostgreSQL backends.")
         with self.engine.begin() as conn:
             result = conn.execute(
                 text("DELETE FROM gauntlet_commands WHERE session_id = :sid RETURNING command"),
