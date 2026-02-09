@@ -132,10 +132,10 @@ async def get_rag_context(query: str):
     return {"query": query, "context": context}
 
 @app.get("/gauntlet/search")
-async def search_artifacts(query: str):
+async def search_artifacts(query: str, semantic: bool = True):
     """Searches historical artifacts for specific behavior or tasks."""
-    results = data_agent.search_snapshots(query)
-    return {"query": query, "results": results}
+    results = data_agent.search_snapshots(query, semantic=semantic)
+    return {"query": query, "semantic": semantic, "results": results}
 
 @app.post("/gauntlet/command/{session_id}")
 async def post_command(session_id: str, command: dict):
