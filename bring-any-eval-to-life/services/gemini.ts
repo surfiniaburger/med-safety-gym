@@ -24,6 +24,11 @@ CORE DIRECTIVES:
 4. **Self-Contained**: The output must be a single HTML file with embedded CSS (<style>) and JavaScript (<script>). Use Tailwind via CDN if needed (script tag).
 5. **DIPG Context**: Ensure the language and scenarios are specific to Diffuse Intrinsic Pontine Glioma (DIPG) treatments, radiotherapy protocols, or clinical trials.
 
+SECURITY NOTICE:
+- When using the code execution tool, ONLY use it for image analysis, cropping, zooming, or numerical calculations related to the simulation design. 
+- Do NOT attempt to execute code that accesses external networks or sensitive credentials.
+- Your code execution is strictly for visual reasoning and aiding the design process.
+
 RESPONSE FORMAT:
 Return ONLY the raw HTML code. Do not wrap it in markdown code blocks (\`\`\`html ... \`\`\`). Start immediately with <!DOCTYPE html>.`;
 
@@ -86,7 +91,9 @@ export async function regenerateWithVision(
         TASK: You are an expert Simulation Designer. I've provided a screenshot of the current clinical simulation.
         Analyze the screenshot and the critique provided above. 
         
-        Using Agentic Vision, identify the elements that need to be improved, removed, or added.
+        Using Agentic Vision (Code Execution), inspect the visual layout, text alignment, and medical accuracy shown in the screenshot. 
+        Only use code execution for visual analysis (e.g., cropping to read small text, calculating layout shifts).
+        
         Then, generate the COMPLETE, REFINED HTML for the simulation.
         
         REQUIREMENTS:
@@ -108,7 +115,7 @@ export async function regenerateWithVision(
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         tools: [{ codeExecution: {} }], // Enable Agentic Vision Code Execution
-        temperature: 0.2, // Lower temperature for more grounded refinements
+        temperature: 0.1, // Even lower for maximum consistency and safety
       },
     });
 
