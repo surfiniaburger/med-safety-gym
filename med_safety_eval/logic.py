@@ -45,7 +45,11 @@ _FILLER_WORDS = {
     "infection", "risk", "risks",
     "continue", "continued", "continuing", "start", "started", "starting", "stop", "stopped", "stopping",
     "pause", "paused", "pausing", "resume", "resumed", "resuming", "yes", "no", "true", "false",
-    "meet", "meets", "met", "meeting", "eligibility", "maintain", "maintaining", "maintained", "monotherapy"
+    "meet", "meets", "met", "meeting", "eligibility", "maintain", "maintaining", "maintained", "monotherapy",
+    "initiate", "initiated", "initiation", "enroll", "enrolled", "enrollment", "clinical", "trial", "study", "ongoing",
+    "recommend", "recommended", "recommendation", "consider", "considered", "considering", "provide", "provided", "providing",
+    "patient", "patients", "treatment", "therapy", "regimen", "dose", "dosage", "use", "using", "used",
+    "drug", "drugs", "medication", "medications", "effective", "effectiveness"
 }
 
 # v0.1.61: Extended bridge words for supports() to allow natural reasoning transitions
@@ -477,8 +481,11 @@ def is_correct_synthesis(final_text: str, ground_truth_final: str) -> bool:
     if gt_entities:
         # If we have key entities, and they match, we can be more lenient with the rest of the text
         if gt_entities.intersection(final_entities):
-            # If all key entities in GT are present in Final, it's a strong signal
-            if gt_entities.issubset(final_entities):
+            # V4.17: Bidirectional subset check. 
+            # If Model provides a subset of GT entities (concise) or vice versa (descriptive), 
+            # and they intersect significantly, we consider it a success.
+            # This handles "Crenolanib" vs "Enroll in Crenolanib trial..."
+            if gt_entities.issubset(final_entities) or final_entities.issubset(gt_entities):
                 return True
             # Otherwise, if there's significant overlap, use a lower similarity threshold
             return _get_max_similarity(gt_cleaned, final_cleaned) >= 0.60

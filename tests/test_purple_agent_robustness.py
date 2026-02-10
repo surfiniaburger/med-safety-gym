@@ -5,6 +5,14 @@ from a2a.types import Message, TaskState
 from a2a.server.tasks import TaskUpdater
 
 from med_safety_gym.messenger import create_message
+import os
+
+@pytest.fixture(autouse=True)
+def setup_env():
+    os.environ["LITELLM_MODEL"] = "gpt-4o"
+    yield
+    if "LITELLM_MODEL" in os.environ:
+        del os.environ["LITELLM_MODEL"]
 
 @pytest.mark.anyio
 async def test_purple_agent_none_content():
