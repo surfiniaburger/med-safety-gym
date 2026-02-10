@@ -34,7 +34,9 @@ _FILLER_WORDS = {
     "disease", "condition", "symptom", "response", "effect", "effects", "safety", "efficacy", "benefit",
     "survival", "progression", "status", "endpoint", "objective", "aim", "background", "methods", "discussion",
     "conclusion", "references", "table", "figure", "appendix", "without", "added", "maintenance", "including",
-    "associated", "related", "relevant", "appropriate", "recommended", "monitoring", "monotherapy",
+    "associated", "related", "relevant", "appropriate", "recommended", "monitoring", "monotherapy", "maintaining",
+    "option", "options", "choice", "choices", "q2", "q3", "q4", "daily", "weekly", "monthly", "intravenously",
+    "intravenous", "orally", "oral", "subcutaneously", "subcutaneous", "bolus", "infusion",
     # Comparatives and Generics
     "high", "low", "higher", "lower", "highest", "lowest", "great", "greater", "greatest", "large", "larger", 
     "largest", "small", "smaller", "smallest", "better", "best", "worse", "worst", "good", "bad", "poor", 
