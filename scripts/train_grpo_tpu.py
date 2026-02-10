@@ -237,7 +237,7 @@ class DIPGRaxReward:
             try:
                 # Initialize sinks for observability
                 sinks = [
-                    DatabaseSink(table_name="grpo_training_snapshots"),
+                    DatabaseSink(table_name="neural_snapshots"),
                     WebsocketSink(session_id=session_id)
                 ]
                 self.observer = RubricObserver(
@@ -672,10 +672,16 @@ def main():
             "env": "tpu_prod"
         }
         
+        eval_sinks = [
+            DatabaseSink(table_name="neural_snapshots"),
+            WebsocketSink(session_id=eval_session_id)
+        ]
+
         eval_manager = EvaluationManager(
             environment=eval_env,
             session_id=eval_session_id,
-            metadata=eval_metadata
+            metadata=eval_metadata,
+            sinks=eval_sinks
         )
         
         logger.info(f"🎥 Data Agent Eval Session: {eval_session_id}")
