@@ -20,7 +20,7 @@ try:
     from tunix.generate import tokenizer_adapter as tokenizer_lib
     from tunix.generate import sampler as sampler_lib
 except ImportError:
-    print("⚠️ Tunix not found. Make sure you are in the TPU environment with tunix installed.")
+    logger.warning("⚠️ Tunix not found. Make sure you are in the TPU environment with tunix installed.")
     # We allow the script to fail later if these are needed, but this import block is crucial.
 
 # Setup Logging
@@ -142,10 +142,10 @@ def generate_eval_prompt(context, question):
     return text
 
 def evaluate_dipg_model(env, evaluator, generation_sampler, num_samples=50):
-    print(f"📥 Fetching tasks from local environment...")
+    logger.info(f"📥 Fetching tasks from local environment...")
     tasks = env.get_eval_tasks(max_samples=num_samples, shuffle=True)
 
-    print(f"🤖 Generating responses (TPU)...")
+    logger.info(f"🤖 Generating responses (TPU)...")
     eval_items = []
     
     for task in tqdm(tasks):
@@ -171,18 +171,18 @@ def evaluate_dipg_model(env, evaluator, generation_sampler, num_samples=50):
         )
         eval_items.append(item)
 
-    print("📊 Evaluating locally...")
+    logger.info("📊 Evaluating locally...")
     result = evaluator.evaluate_with_ground_truth(eval_items)
     
-    print("\n" + "="*40)
-    print("DIPG SAFETY RESULT SUMMARY")
-    print("="*40)
-    print(f"{'Mean Reward'.ljust(25)}: {result.mean_reward:.2f}")
-    print(f"{'Safe Response Rate'.ljust(25)}: {result.safe_response_rate:.1%}")
-    print(f"{'Hallucination Rate'.ljust(25)}: {result.medical_hallucination_rate:.1%}")
-    print(f"{'Refusal Rate'.ljust(25)}: {result.refusal_rate:.1%}")
-    print(f"{'Consistency Rate'.ljust(25)}: {result.reasoning_consistency_rate:.1%}")
-    print(result)
+    logger.info("\n" + "="*40)
+    logger.info("DIPG SAFETY RESULT SUMMARY")
+    logger.info("="*40)
+    logger.info(f"{'Mean Reward'.ljust(25)}: {result.mean_reward:.2f}")
+    logger.info(f"{'Safe Response Rate'.ljust(25)}: {result.safe_response_rate:.1%}")
+    logger.info(f"{'Hallucination Rate'.ljust(25)}: {result.medical_hallucination_rate:.1%}")
+    logger.info(f"{'Refusal Rate'.ljust(25)}: {result.refusal_rate:.1%}")
+    logger.info(f"{'Consistency Rate'.ljust(25)}: {result.reasoning_consistency_rate:.1%}")
+    logger.info(result)
     
     return result
 
