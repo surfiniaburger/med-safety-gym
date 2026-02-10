@@ -3,11 +3,11 @@ from med_safety_eval.logic import is_grounded, _is_abstention
 
 def test_negative_grounding_keywords():
     """Verify that V4.7 negative grounding keywords are correctly recognized."""
-    context = "The study mentioned drug A but no evidence was found for drug B."
+    context = "The study mentioned Crenolanib but no evidence was found for Ponatinib."
     
     # Negative claims should be grounded if context supports the absence or if model abstains
-    assert is_grounded("No evidence found for drug B.", context, model_abstains=True)
-    assert is_grounded("drug A was mentioned.", context)
+    assert is_grounded("No evidence found for Ponatinib.", context, model_abstains=True)
+    assert is_grounded("Crenolanib was mentioned.", context)
     
     # New V4.7 keywords
     assert _is_abstention("The information is ambiguous.")
