@@ -127,8 +127,11 @@ def _clean_for_matching(text: str) -> str:
     return " ".join(re.split(r'\s+', text)).strip()
 
 
-def _extract_entities(text: str, pattern: str = ENTITY_PATTERN, min_len: int = 4, filler_words: Optional[set] = None) -> set:
+def _extract_entities(text: str, pattern: str = ENTITY_PATTERN, min_len: int = 4, filler_words: Optional[set] = None, apply_filters: bool = True) -> set:
     """Helper to extract clinical entities from text while filtering filler words."""
+    if not apply_filters:
+        return {e.lower() for e in re.findall(pattern, text, re.IGNORECASE)}
+
     if filler_words is None:
         filler_words = _FILLER_WORDS
     return {
@@ -563,12 +566,12 @@ def supports(proof_text: str, final_text: str, context: Optional[str] = None) ->
     # v0.1.58: Case-insensitive to capture drugs like 'panobinostat'
     # v0.1.61: Expanded to allow clinical trial IDs (NCT numbers)
     f_entities_lower = _extract_entities(final_text, filler_words=_REASONING_FILLER_WORDS)
-    p_entities_lower = {e.lower() for e in re.findall(ENTITY_PATTERN, proof_text, re.IGNORECASE)}
+    p_entities_lower = _extract_entities(proof_text, apply_filters=False)
 
     # v0.1.61: Pre-clean context for fallback check
     c_entities_lower = set()
     if context:
-        c_entities_lower = {e.lower() for e in re.findall(ENTITY_PATTERN, context, re.IGNORECASE)}
+        c_entities_lower = _extract_entities(context, apply_filters=False)
     
     for ent_lower in f_entities_lower:
         # 1. Direct match check
